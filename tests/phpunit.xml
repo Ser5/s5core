@@ -1,0 +1,6 @@
+<phpunit
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:noNamespaceSchemaLocation="https://schema.phpunit.de/latest/phpunit.xsd"
+	bootstrap="phpunit_bootstrap.php"
+>
+</phpunit>
