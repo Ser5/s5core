@@ -1,0 +1,4 @@
+#!/usr/bin/env php
+<?
+$app = new \S5\Console\Application('App', '1.0.0');
+$app->run();
