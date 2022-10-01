@@ -1,5 +1,5 @@
 <?
-namespace S5\RunLogger;
+namespace S5\RunLoggers;
 
 class RunLoggersFactory {
 	protected array $loggers;
@@ -15,11 +15,11 @@ class RunLoggersFactory {
 	/**
 	 * Возвращает объект логгера.
 	 *
-	 * @param  string|int|bool|BaseRunLogger $logger
-	 * @return BaseRunLogger
+	 * @param  string|int|bool|IRunLogger $logger
+	 * @return IRunLogger
 	 */
 	public function get ($logger) {
-		if ($logger instanceof BaseRunLogger) {
+		if ($logger instanceof IRunLogger) {
 			return $logger;
 		}
 		else {

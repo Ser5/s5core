@@ -1,5 +1,5 @@
 <?
-namespace S5\RunLogger;
+namespace S5\RunLoggers;
 
 class EmptyRunLogger extends BaseRunLogger {
 	public function get ($message, $type = false, $level = 1) { return false; }

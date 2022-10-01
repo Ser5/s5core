@@ -1,5 +1,5 @@
 <?
-namespace S5\RunLogger;
+namespace S5\RunLoggers;
 
 class JsonRunLogger extends BaseRunLogger {
 	public function get ($message, $type = false, $level = false) {

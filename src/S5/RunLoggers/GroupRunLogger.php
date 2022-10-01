@@ -1,5 +1,5 @@
 <?
-namespace S5\RunLogger;
+namespace S5\RunLoggers;
 
 class GroupRunLogger extends BaseRunLogger {
 	protected $loggersList;
@@ -42,7 +42,7 @@ class GroupRunLogger extends BaseRunLogger {
 
 
 
-	public function pushLogger (BaseRunLogger $logger) {
+	public function pushLogger (IRunLogger $logger) {
 		$this->loggersList[] = $logger;
 	}
 

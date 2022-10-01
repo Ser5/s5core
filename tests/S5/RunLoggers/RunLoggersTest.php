@@ -1,9 +1,9 @@
 <?
-namespace S5\RunLogger;
+namespace S5\RunLoggers;
 
 
 
-class RunLoggerTest extends \PHPUnit\Framework\TestCase {
+class RunLoggersTest extends \PHPUnit\Framework\TestCase {
 	public function testEmpty () {
 		$rl = new EmptyRunLogger();
 		$this->assertEquals('', $rl->get('test', 'ok', 2));
@@ -76,10 +76,10 @@ class RunLoggerTest extends \PHPUnit\Framework\TestCase {
 
 	public function testFactory () {
 		$f = new RunLoggersFactory(['loggers' => [
-			'empty'   => '\S5\RunLogger\EmptyRunLogger',
-			''        => '\S5\RunLogger\EmptyRunLogger',
-			'console' => '\S5\RunLogger\ConsoleRunLogger',
-			'1'       => '\S5\RunLogger\ConsoleRunLogger',
+			'empty'   => '\S5\RunLoggers\EmptyRunLogger',
+			''        => '\S5\RunLoggers\EmptyRunLogger',
+			'console' => '\S5\RunLoggers\ConsoleRunLogger',
+			'1'       => '\S5\RunLoggers\ConsoleRunLogger',
 			'group'   => fn() => new GroupRunLogger([new ConsoleRunLogger(), new ArrayRunLogger()]),
 		]]);
 

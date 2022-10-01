@@ -1,5 +1,5 @@
 <?
-namespace S5\RunLogger;
+namespace S5\RunLoggers;
 
 class ArrayRunLogger extends BaseRunLogger {
 	protected array $outputList = [];
