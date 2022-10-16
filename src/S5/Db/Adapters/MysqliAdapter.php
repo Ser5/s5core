@@ -1,12 +1,19 @@
 <?
-namespace S5\Adapters;
+namespace S5\Db\Adapters;
 
-class MysqliAdapter implements IAdapter {
+class MysqliAdapter extends AbstractAdapter {
 	protected \mysqli $mysqli;
 
-	public function __construct (\mysqli $mysqli) {
+	public function __construct (\mysqli $mysqli, array $tableNamesPrefix = []) {
+		//parent::construct($tableNamesPrefix);
 		$this->mysqli = $mysqli;
 	}
+
+
+
+	/*public function withTableNamesPrefix (array $tableNamesPrefix): MysqliAdapter {
+		return new static($this->mysqli, $tableNamesPrefix);
+	}*/
 
 
 
@@ -17,16 +24,24 @@ class MysqliAdapter implements IAdapter {
 
 
 	public function query (string $query) {
-		$this->mysqli->query($query);
+		return $this->checkQueryResult($this->mysqli->query($query), $this->mysqli->error);
 	}
 
 
 
-	public function getAssoc (string $query): array {
-		return $this->mysqli->query($query)->fetch_assoc();
+	public function fetchObject ($r) {
+		return $r->fetch_object();
+	}
+
+	public function fetchAssoc ($r) {
+		return $r->fetch_assoc();
 	}
 
 
+
+	public function getInsertId (): int {
+		return $this->mysqli->insert_id;
+	}
 
 	public function getAffectedRows (): int {
 		return $this->mysqli->affected_rows;

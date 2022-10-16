@@ -1,36 +1,55 @@
 <?
-namespace S5\Adapters;
+namespace S5\Db\Adapters;
 
-class PdoAdapter implements IAdapter {
+class PdoAdapter extends AbstractAdapter {
 	protected \PDO $pdo;
 	protected int  $affectedRows = 0;
 
-	public function __construct (\PDO $pdo) {
+	public function __construct (\PDO $pdo, array $tableNamesPrefix = []) {
+		//parent::construct($tableNamesPrefix);
 		$this->pdo = $pdo;
 	}
 
 
 
+	/*public function withTableNamesPrefix (array $tableNamesPrefix): PdoAdapter {
+		return new static($this->pdo, $tableNamesPrefix);
+	}*/
+
+
+
 	public function escape (string $query): string {
-		return $this->pdo->quote($query);
+		return trim($this->pdo->quote($query), "'");
 	}
 
 
 
 	public function query (string $query) {
-		$this->pdo->query($query);
-	}
-
-
-
-	public function getAssoc (string $query): array {
-		$sth = $this->pdo->query($query);
-		$r   = $sth->fetch(\PDO::FETCH_ASSOC);
-		$this->affectedRows = $sth->rowCount();
+		try {
+			$r = $this->checkQueryResult($this->pdo->query($query), $this->pdo->errorInfo());
+			$this->affectedRows = $r->rowCount();
+		} catch (\Exception $e) {
+			$this->affectedRows = 0;
+			throw $e;
+		}
 		return $r;
 	}
 
 
+
+	public function fetchObject ($r) {
+		return $r->fetch(\PDO::FETCH_OBJ);
+	}
+
+	public function fetchAssoc ($r) {
+		return $r->fetch(\PDO::FETCH_ASSOC);
+	}
+
+
+
+	public function getInsertId (): int {
+		return $this->pdo->lastInsertId();
+	}
 
 	public function getAffectedRows (): int {
 		return $this->affectedRows;

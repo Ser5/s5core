@@ -3,13 +3,11 @@ namespace S5;
 
 class TestCase extends \PHPUnit\Framework\TestCase {
 	public function assertException ($func, $failText = 'Failed') {
-		do {
-			try {
-				$func();
-			} catch (\Exception $e) {
-				break;
-			}
+		try {
+			$func();
 			$this->fail($failText);
-		} while (false);
+		} catch (\Throwable $e) {
+			$this->assertTrue(true); //Чтобы PHPUnit не пищал про Risky tests
+		}
 	}
 }
