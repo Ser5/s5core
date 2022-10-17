@@ -15,7 +15,7 @@ namespace S5\BatchDb;
 class BatchUpdate extends BatchBase {
 	protected string $joinOn = 'data.id = t.id';
 
-	private int $_batchLength = 0;
+	protected int $batchLength = 0;
 
 
 
@@ -58,7 +58,7 @@ class BatchUpdate extends BatchBase {
 
 
 	protected function getValuesString (array $data): string {
-		$this->_batchLength++;
+		$this->batchLength++;
 
 		$fieldValuesString = '';
 		foreach ($data as $k => $v) {
@@ -81,16 +81,16 @@ class BatchUpdate extends BatchBase {
 	protected function isLimitReached (string $fieldValuesString): bool {
 		return (
 			parent::isLimitReached($fieldValuesString) or
-			$this->_batchLength > $this->maxBatchLength
+			$this->batchLength > $this->maxBatchLength
 		);
 	}
 
 
 
 	protected function assembleQuery (): string {
-		$this->_batchLength = 0;
-		$this->queryValues  = substr($this->queryValues, 0, -1);
-		$query              = str_replace('#values#', $this->queryValues, $this->queryBase);
+		$this->batchLength = 0;
+		$this->queryValues = substr($this->queryValues, 0, -1);
+		$query             = str_replace('#values#', $this->queryValues, $this->queryBase);
 		return $query;
 	}
 }

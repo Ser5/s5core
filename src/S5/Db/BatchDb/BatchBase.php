@@ -6,7 +6,7 @@ use S5\BatchDb\Adapters\IAdapter;
  * Основа для пакетного изменения данных.
  */
 abstract class BatchBase {
-	protected IAdapter $adapter;
+	protected IAdapter $dbAdapter;
 	protected string   $tableName;
 	protected array    $colParams = [];
 
@@ -21,7 +21,7 @@ abstract class BatchBase {
 	 * Ctor.
 	 *
 	 * $params:
-	 * - adapter
+	 * - dbAdapter
 	 * - tableName      - по-любому надо передать
 	 * - maxQueryLength - Ограничение длины запроса по символам. Вычисляется самостоятельно, но можно и принудительно передать.
 	 * - maxBatchLength - Максимальное количество записей в пакете. Тоже вычисляется, только про количество записей в одном пакете.
@@ -41,7 +41,7 @@ abstract class BatchBase {
 
 	protected function calcLimits () {
 		if (!$this->maxQueryLength) {
-			$maxAllowedPacket     = (int)$this->adapter->getAssoc("show variables like 'max_allowed_packet'")['Value'];
+			$maxAllowedPacket     = (int)$this->dbAdapter->getAssoc("show variables like 'max_allowed_packet'")['Value'];
 			$this->maxQueryLength = (int)($maxAllowedPacket - round($maxAllowedPacket / 10));
 		}
 	}
@@ -148,8 +148,8 @@ abstract class BatchBase {
 	protected function runQuery (): int {
 		if ($this->queryValues) {
 			$query = $this->assembleQuery();
-			$this->adapter->query($query);
-			$affectedRowsNumber = $this->adapter->getAffectedRows();
+			$this->dbAdapter->query($query);
+			$affectedRowsNumber = $this->dbAdapter->getAffectedRows();
 			$this->totalAffectedRowsNumber += $affectedRowsNumber;
 			$this->queryBase   = '';
 			$this->queryValues = '';

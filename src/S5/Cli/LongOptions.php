@@ -17,7 +17,7 @@ namespace S5\Cli;
  *
  * Код для получения аргументов:
  * <code>
- * $options = new S5_Cli_LongOptions();
+ * $options = new LongOptions();
  * $foo    = $options->get('foo');    //1, аргумент со значением
  * $bar    = $options->get('bar');    //2, аргумент со значением
  * $baz    = $options->get('baz');    //false, несуществующий аргумент
@@ -27,16 +27,16 @@ namespace S5\Cli;
  * </code>
  */
 class LongOptions {
-	private $_optionsHash;
+	protected $optionsHash;
 
 	public function __construct () {
 		global $argc, $argv;
 		$matches = array();
 		for ($a = 1; $a < $argc; $a++) {
 			if (preg_match('/^--([^=]+)=(.+)$/', $argv[$a], $matches)) {
-				$this->_optionsHash[$matches[1]] = $matches[2];
+				$this->optionsHash[$matches[1]] = $matches[2];
 			} elseif (preg_match('/^--([^=]+)$/', $argv[$a], $matches)) {
-				$this->_optionsHash[$matches[1]] = true;
+				$this->optionsHash[$matches[1]] = true;
 			}
 		}
 	}
@@ -44,13 +44,13 @@ class LongOptions {
 
 
 	/**
-	 * @param string $name
-	 * @param mixed $defaultValue
+	 * @param  string $name
+	 * @param  mixed $defaultValue
 	 * @return mixed|false
 	 */
 	public function get ($name, $defaultValue = false) {
-		if (isset($this->_optionsHash[$name])) {
-			return $this->_optionsHash[$name];
+		if (isset($this->optionsHash[$name])) {
+			return $this->optionsHash[$name];
 		} else {
 			return $defaultValue;
 		}
