@@ -14,9 +14,12 @@ class TasksManagerTest extends \S5\TestCase {
 
 	public function __construct (...$params) {
 		parent::__construct(...$params);
-		$pdo                 = new \PDO('mysql:dbname=test;host=127.0.0.1;charset=UTF8', 'root', '');
-		$this->_pdoAdapter   = new PdoAdapter($pdo);
-		$this->_dbUtils      = new DbUtils($this->_pdoAdapter);
+
+		$d = $GLOBALS['phpUnitParams']['db'];
+
+		$pdo               = new \PDO("mysql:dbname=$d[name];host=$d[host];charset=UTF8", $d['login'], $d['password']);
+		$this->_pdoAdapter = new PdoAdapter($pdo);
+		$this->_dbUtils    = new DbUtils($this->_pdoAdapter);
 	}
 
 
