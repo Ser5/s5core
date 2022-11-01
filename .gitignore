@@ -10,3 +10,4 @@ composer.lock
 
 /tests/S5/IO/files/
 /tests/S5/StaticCache/files/
+/tests/S5/Assets/**/min/

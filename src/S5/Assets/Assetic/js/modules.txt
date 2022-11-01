@@ -1,0 +1,1 @@
+npm i yargs terser browserslist autoprefixer postcss postcss-css-variables lightningcss
