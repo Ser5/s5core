@@ -1,0 +1,12 @@
+.*
+!.gitignore
+
+env.php
+debug/
+/tests/**/npm/
+
+composer.lock
+/vendor/
+
+/tests/S5/IO/files/
+/tests/S5/StaticCache/files/
