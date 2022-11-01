@@ -71,6 +71,34 @@ class File extends Item {
 
 
 
+	/**
+	 * Запись данных в файл для дальнейшего подключения через `$data = require $filePath`.
+	 *
+	 * Допустим, есть у нас данные:
+	 * ```
+	 * [
+	 *    'a' => 1,
+	 *    'b' => 2,
+	 * ]
+	 * ```
+	 *
+	 * Этот метод запишет в файл следующее:
+	 * ```
+	 * <?
+	 * return array(
+	 *    'a' => 1,
+	 *    'b' => 2,
+	 * );
+	 * ```
+	 *
+	 * Далее это добро можно считать через простой `$data = require $filePath`;
+	 */
+	public function putPhpReturn ($data) {
+		$this->putContents("<?\nreturn ".var_export($data,1).";\n");
+	}
+
+
+
 	public function touch () {
 		$this->_createDir();
 		touch($this->getPath());
@@ -106,51 +134,98 @@ class File extends Item {
 	 * Для переименования:
 	 * $f->rename('newname.txt');
 	 *
-	 * Для перемещения:
+	 * Для перемещения с новым названием:
 	 * $f->rename('/other/directory/newname.txt');
 	 *
-	 * При перемещении отсутствующие папки создаются автоматически.
+	 * Для перемещения с сохранением названия (обязателен слэш на конце):
+	 * $f->rename('/other/directory/');
 	 *
-	 * @param string $name
+	 * При перемещении отсутствующие папки создаются автоматически.
 	 */
 	public function rename ($name) {
-		$r = true;
-		if ($this->isExists()) {
-			$testPath = new Path($name);
-			if (!$testPath->isComplex()) {
-				if ($name != $this->getName()) {
-					$dir     = $this->getDirectory();
-					$newPath = "$dir/$name";
-					$r       = rename($this->getPath(), $newPath);
-				}
-			} else {
-				$newPath   = $name;
-				$targetDir = new Directory(dirname($newPath));
-				if (!$targetDir->isExists()) {
-					$targetDir->create();
-				}
-				$r = rename($this->getPath(), $newPath);
-			}
-		}
-		if (!$r) {
-			throw new \Exception("Can't rename \"$this\" to \"$name\"");
-		}
-		$this->setPath($newPath);
+		return $this->renameOrCopy($name, 'rename');
 	}
 
 
 
 	/**
 	 * Перемещение файла с сохранением имени.
-	 *
-	 * @param string $dirPath
 	 */
 	public function move ($dirPath) {
-		$thisDir   = $this->getDirectory();   //Получаем объекты директорий,
-		$targetDir = new Directory($dirPath); //чтобы сравнивать нормализованные пути
-		if ($targetDir->getPath() != $thisDir->getPath()) {
-			$targetPath = $targetDir.'/'.$this->getName();
-			$this->rename($targetPath);
+		$this->rename("$dirPath/");
+	}
+
+
+
+	/**
+	 * Копирование файла.
+	 *
+	 * Копирование в ту же папку с новым названием:
+	 * $f->copy('file_copy.txt');
+	 *
+	 * Для копирования в другую папку с новым названием:
+	 * $f->copy('/other/directory/file_copy.txt');
+	 *
+	 * Для копирования в другую папку с сохранением названия (обязателен слэш на конце):
+	 * $f->copy('/other/directory/');
+	 *
+	 * При копировании отсутствующие папки создаются автоматически.
+	 */
+	public function copy ($dest) {
+		$this->renameOrCopy($dest, 'copy');
+	}
+
+
+
+	protected function renameOrCopy ($name, $mode) {
+		$r = true;
+		if ($this->isExists()) {
+			$functionName = ($mode == 'rename') ? 'rename' : 'copy';
+			$type         = (new Path($name))->getComplexityType();
+			switch ($type) {
+				//Переименование/копирование в эту же папку с другим названием файла
+				case 'simple_file':
+					if ($this->getName() != $name) {
+						$dir     = $this->getDirectory();
+						$newPath = "$dir/$name";
+						$r       = $functionName($this->getPath(), $newPath);
+					}
+				break;
+				//Переименование/копирование в другую папку с новым названием файла
+				case 'complex_file':
+					$newPath    = $name;
+					$targetFile = new File($newPath);
+					if ($this->getPath() != $targetFile->getPath()) {
+						$targetDir = new Directory(dirname($newPath));
+						if (!$targetDir->isExists()) {
+							$targetDir->create();
+						}
+						$r = $functionName($this->getPath(), $newPath);
+					}
+				break;
+				//Перемещение/копирование в другую папку с сохранением названия файла
+				case 'simple_dir':
+				case 'complex_dir':
+					$thisDir   = $this->getDirectory(); //Получаем объекты директорий,
+					$targetDir = new Directory($name);  //чтобы сравнивать нормализованные пути
+					if ($thisDir->getPath() != $targetDir->getPath()) {
+						if (!$targetDir->isExists()) {
+							$targetDir->create();
+						}
+						$newPath = $name . $this->getName();
+						$r = $functionName($this->getPath(), $newPath);
+					}
+				break;
+			}
+		}
+
+		if (!$r) {
+			$actionMessage = ($mode == 'rename') ? 'переименовать' : 'скопировать';
+			throw new \Exception("Не удалось $actionMessage \"$this\" в \"$name\"");
+		}
+
+		if ($mode == 'rename') {
+			$this->setPath($newPath);
 		}
 	}
 

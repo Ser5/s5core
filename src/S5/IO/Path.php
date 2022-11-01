@@ -23,7 +23,7 @@ class Path implements IStringablePath {
 				if (count($finalPathPartsList) > 0) {
 					array_pop($finalPathPartsList);
 				} else {
-					throw new \Exception("Cannot process .. - path too short");
+					throw new \Exception("Не удалось обработать .. - путь слишком короткий");
 				}
 			} else {
 				$finalPathPartsList[] = $part;
@@ -35,13 +35,54 @@ class Path implements IStringablePath {
 
 
 
+	/**
+	 * Определяет, является ли путь сложным.
+	 *
+	 * Возвращает true, если путь состоит из двух частей или более - разделённых символами "/" или "\".
+	 *
+	 * Простые пути:
+	 * - dirname
+	 * - /dirname/
+	 * - filename.txt
+	 *
+	 * Сложные пути:
+	 * - dir/subdir/
+	 * - dir/file.txt
+	 */
 	public function isComplex (): bool {
-		return (strpos($this->pathString, '/') !== false or strpos($this->pathString, '\\') !== false);
+		$pathString = trim($this->pathString, '/\\');
+		return (strpos($pathString, '/') !== false or strpos($pathString, '\\') !== false);
 	}
 
 
 
-	public function __toString () {
+	public function isEndsWithSlash () {
+		return preg_match('~[/\\\\]$~ui', $this->pathString);
+	}
+
+
+
+	/**
+	 * Возвращает тип в зависимости от наличия в пути папок и файла.
+	 *
+	 * - file.txt     - simple_file
+	 * - dir/         - simple_dir
+	 * - dir/file.txt - complex_file
+	 * - dir/subdir/  - complex_dir
+	 */
+	public function getComplexityType (): string {
+		$type =
+			($this->isComplex() ? 'complex' : 'simple') .
+			'_' .
+			($this->isEndsWithSlash() ? 'dir' : 'file')
+		;
+
+		return $type;
+	}
+
+
+
+	public function __toString (): string {
 		return $this->pathString;
 	}
 }

@@ -98,6 +98,26 @@ abstract class Item implements IStringablePath {
 
 
 
+	public function getMtimeDiff ($file): int {
+		$thisMtimeTs = $this->getMtime()->getTimestamp();
+		$fileMtimeTs = ($file instanceof Item) ? $file->getMtime()->getTimestamp() : filemtime($file);
+		return ($thisMtimeTs - $fileMtimeTs);
+	}
+
+	public function isMtimeNewer ($file): bool {
+		return ($this->getMtimeDiff($file) > 0);
+	}
+
+	public function isMtimeOlder ($file): bool {
+		return ($this->getMtimeDiff($file) < 0);
+	}
+
+	public function isMtimeSame ($file): bool {
+		return ($this->getMtimeDiff($file) == 0);
+	}
+
+
+
 	/**
 	 * @param  string $documentRoot
 	 * @return string
