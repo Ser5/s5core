@@ -7,7 +7,7 @@ use S5\Db\DbUtils;
 
 
 class TasksManagerTest extends \S5\TestCase {
-	private PdoAdapter $_pdoAdapter;
+	private PdoAdapter $_dbAdapter;
 	private DbUtils    $_dbUtils;
 
 
@@ -17,9 +17,9 @@ class TasksManagerTest extends \S5\TestCase {
 
 		$d = $GLOBALS['phpUnitParams']['db'];
 
-		$pdo               = new \PDO("mysql:dbname=$d[name];host=$d[host];charset=UTF8", $d['login'], $d['password']);
-		$this->_pdoAdapter = new PdoAdapter($pdo);
-		$this->_dbUtils    = new DbUtils($this->_pdoAdapter);
+		$pdo              = new \PDO("mysql:dbname=$d[name];host=$d[host];charset=UTF8", $d['login'], $d['password']);
+		$this->_dbAdapter = new PdoAdapter($pdo);
+		$this->_dbUtils   = new DbUtils($this->_dbAdapter);
 	}
 
 
@@ -38,7 +38,7 @@ class TasksManagerTest extends \S5\TestCase {
 		$tm = $this->_initStorage(['tableNamesPrefix' => $prefix]);
 
 		$tableNamesHash = [];
-		foreach ($this->_pdoAdapter->getAssocList("SHOW TABLES") as $e) {
+		foreach ($this->_dbAdapter->getAssocList("SHOW TABLES") as $e) {
 			$tableNamesHash[current($e)] = true;
 		}
 		foreach (["{$prefix}task_types", "{$prefix}task_states", "{$prefix}tasks_queue"] as $tableName) {
@@ -68,7 +68,6 @@ class TasksManagerTest extends \S5\TestCase {
 			'state_id'    => $tm::NEW,
 			'progress'    => 0,
 			'params'      => '',
-			'log'         => '',
 			'created_at'  => $gotTask->created_at,
 			'updated_at'  => $gotTask->updated_at,
 			'started_at'  => null,
@@ -78,15 +77,15 @@ class TasksManagerTest extends \S5\TestCase {
 		$this->assertEquals($gotTask->created_at, $gotTask->updated_at);
 
 		//С параметрами, определёнными вручную
-		$taskId       = $tm->create(['type_id' => $typeId, 'state_id' => $tm::DONE, 'progress' => 100, 'params' => '{"a":1}', 'log' => 'done']);
+		$paramsString = serialize(['a' => 1]);
+		$taskId       = $tm->create(['type_id' => $typeId, 'state_id' => $tm::DONE, 'progress' => 100, 'params' => $paramsString]);
 		$gotTask      = $tm->get($taskId);
 		$expectedTask = (object)[
 			'id'          => $taskId,
 			'type_id'     => $typeId,
 			'state_id'    => $tm::DONE,
 			'progress'    => 100,
-			'params'      => '{"a":1}',
-			'log'         => 'done',
+			'params'      => $paramsString,
 			'created_at'  => $gotTask->created_at,
 			'updated_at'  => $gotTask->updated_at,
 			'started_at'  => null,
@@ -120,7 +119,6 @@ class TasksManagerTest extends \S5\TestCase {
 			'state_id'    => $tm::RUNNING,
 			'progress'    => 0,
 			'params'      => '',
-			'log'         => '',
 			'created_at'  => $gotTask->created_at,
 			'updated_at'  => $gotTask->updated_at,
 			'started_at'  => null,
@@ -129,15 +127,15 @@ class TasksManagerTest extends \S5\TestCase {
 		$this->assertEquals($expectedTask, $gotTask);
 
 		//Редактируем много данных
-		$tm->edit($taskId, ['type_id' => $typeId, 'state_id' => $tm::DONE, 'progress' => 100, 'params' => '{"a":1}', 'log' => 'done']);
+		$paramsString = serialize(['a' => 1]);
+		$tm->edit($taskId, ['type_id' => $typeId, 'state_id' => $tm::DONE, 'progress' => 100, 'params' => $paramsString]);
 		$gotTask      = $tm->get($taskId);
 		$expectedTask = (object)[
 			'id'          => $taskId,
 			'type_id'     => $typeId,
 			'state_id'    => $tm::DONE,
 			'progress'    => 100,
-			'params'      => '{"a":1}',
-			'log'         => 'done',
+			'params'      => $paramsString,
 			'created_at'  => $gotTask->created_at,
 			'updated_at'  => $gotTask->updated_at,
 			'started_at'  => null,
@@ -145,10 +143,11 @@ class TasksManagerTest extends \S5\TestCase {
 		];
 		$this->assertEquals($expectedTask, $gotTask);
 
-		//add_log
-		$tm->edit($taskId, ['add_log' => 'doing']);
-		$tm->edit($taskId, ['add_log' => 'job']);
-		$this->assertEquals('donedoingjob', $tm->get($taskId)->log);
+		//Добавляем логи
+		$tm->createLogsList($taskId, ['done']);
+		$tm->createLogsList($taskId, ['doing', 'job']);
+		$this->assertEquals(['done', 'doing', 'job'], $tm->getLogTextsList(['task_id' => $taskId]));
+		$this->assertEquals(['doing', 'job'],         $tm->getLogTextsList(['task_id' => $taskId, 'limit' => '1, 2']));
 
 		$tm->deleteStorage();
 	}
@@ -201,126 +200,111 @@ class TasksManagerTest extends \S5\TestCase {
 
 
 
-	public function testRunWithFunction () {
-		$this->_testRun([
-			'code'             => 'function',
-			'callback_type_id' => TasksManager::FUNCTION,
-			'callback_method'  => '\S5\TasksManager\tasksCallbackFunction',
-		]);
-	}
+	public function testNormalRun () {
+		//Будем выполнять каждую задачу в 10 шагов. Каждый шаг - 1 сек.
+		//Обновление прогресса - каждые 2 секунды.
+		//Соответственно, обновление прогресса и лога будет происходить каждый второй шаг.
+		$progressUpdatesAmount = 0;
+		$dbAdapter = new CallbackAdapter(function ($type, $p) use (&$progressUpdatesAmount) {
+			$r = $this->_dbAdapter->$type(...$p);
+			if ($type == 'query' and preg_match('/SET\s+progress\s*=\s*\d+/sui', $p[0])) {
+				$progressUpdatesAmount++;
+			}
+			return $r;
+		});
 
-	public function testRunWithClassMethod () {
-		$this->_testRun([
-			'code'             => 'class_method',
-			'callback_type_id' => TasksManager::CLASS_METHOD,
-			'callback_source'  => '\S5\TasksManager\TasksCallbackStaticClass',
-			'callback_method'  => 'run',
-		]);
-	}
-
-	public function testRunWithHashMethod () {
-		$this->_testRun([
-			'code'             => 'hash_method',
-			'callback_type_id' => TasksManager::HASH_METHOD,
-			'callback_source'  => 'object',
-			'callback_method'  => 'run',
-		]);
-	}
+		$nowTs         = time();
+		$runTimeGetter = function () use (&$nowTs) {
+			return $nowTs++;
+		};
 
 
+		$tm = $this->_initStorage(compact('dbAdapter', 'runTimeGetter'));
 
-	private function _testRun (array $typeData) {
-		$tm = $this->_initStorage();
 
-		$typeId = $this->_createType($tm, [
+		$functionTypeId = $this->_createType($tm, [
 			'code'             => 'function',
 			'callback_type_id' => $tm::FUNCTION,
 			'callback_method'  => '\S5\TasksManager\tasksCallbackFunction',
 		]);
-
-		$nowTs     = time();
-		$nowString = date('Y-m-d H:i:s', $nowTs);
-
-		$mockTask = (object)[
-			'id'                => 1,
-			'type_id'           => $typeId,
-			'state_id'          => $tm::NEW,
-			'progress'          => 0,
-			'params'            => '',
-			'log'               => '',
-			'created_at'        => $nowString,
-			'updated_at'        => $nowString,
-			'started_at'        => null,
-			'finished_at'       => null,
-			'_callback_type_id' => $typeId,
-			'_callback_source'  => null,
-			'_callback_method'  => '\S5\TasksManager\tasksCallbackFunction',
-		];
-
-		$dbUpdatesAmount = 0;
-		$logStringsList  = [];
-
-		$dbMock = function (string $type, array $params = []) use ($tm, &$mockTask, &$dbUpdatesAmount, &$logStringsList) {
-			$value   = array_shift($params);
-			$matches = [];
-			if ($type == 'escape') {
-				return $value;
-			}
-			//Активных задач нет
-			if ($type == 'getObject' and preg_match('/state[^\d]+'.$tm::RUNNING.'/ui', $value)) {
-				return null;
-			}
-			//Это - задача на запуск
-			if ($type == 'getObject' and preg_match('/state[^\d]+'.$tm::NEW.'/ui', $value)) {
-				return $mockTask;
-			}
-			//Установка статуса задачи в "работает"
-			if ($type == 'query' and preg_match('/state[^\d]+'.$tm::RUNNING.'/ui', $value)) {
-				$mockTask->state = $tm::RUNNING;
-			}
-			//Обновляем прогресс и лог
-			if ($type == 'query' and preg_match("/SET.+?progress.+?(\d+).+?log.+?CONCAT\\(log, '([^']+)'\\)/ui", $value, $matches)) {
-				$mockTask->progress = $matches[1];
-				$mockTask->log     .= $matches[2];
-				$dbUpdatesAmount++;
-				$logStringsList[] = $matches[2];
-				if ($dbUpdatesAmount == 5 and preg_match("/SET.+?state.+?".$tm::DONE."/ui", $value)) {
-					$mockTask->state = $tm::DONE;
-				}
-			}
-		};
-
-		//Выполняем задачу в 10 шагов. Каждый шаг - 0,5 сек.
-		//Соответственно, дополнение лога будет происходить каждый второй шаг.
-		$isFirstTime = true;
-		$timeGetter = function () use (&$nowTs, &$isFirstTime) {
-			if ($isFirstTime) {
-				$isFirstTime = false;
-				return $nowTs;
-			}
-			$nowTs += 0.5;
-			return floor($nowTs);
-		};
-
-		$tm->run([
-			'callbacks_hash' => ['object' => new TasksCallbackClass()],
-			'db_adapter'     => new CallbackAdapter($dbMock),
-			'time_getter'    => $timeGetter,
+		$classTypeId = $this->_createType($tm, [
+			'code'             => 'class_method',
+			'callback_type_id' => $tm::CLASS_METHOD,
+			'callback_source'  => '\S5\TasksManager\TasksCallbackStaticClass',
+			'callback_method'  => 'run',
+		]);
+		$hashTypeId = $this->_createType($tm, [
+			'code'             => 'hash_method',
+			'callback_type_id' => $tm::HASH_METHOD,
+			'callback_source'  => 'object',
+			'callback_method'  => 'run',
 		]);
 
-		$expectedDbUpdatesAmount = 5;
-		$expectedLogStringsList  = [
-			'10;20;',
-			'30;40;',
-			'50;60;',
-			'70;80;',
-			'90;100;',
-		];
 
-		$this->assertEquals($expectedDbUpdatesAmount, $dbUpdatesAmount);
-		$this->assertEquals(100,                      $mockTask->progress);
-		$this->assertEquals($expectedLogStringsList,  $logStringsList);
-		$this->assertEquals($tm::DONE,                $mockTask->state);
+		//Сформируем очередь:
+		//4.) задача с методом объекта
+		//3.) задача со статическим методом
+		//2.) задача с функцией
+		//1.) выполненная задача
+		//
+		//Выполняться они будут в порядке 2, 3, 4.
+		//Задача №1, самая старая, будет пропущена.
+		$doneTask = $tm->create([
+			'type_id'  => $functionTypeId,
+			'state_id' => $tm::DONE,
+		]);
+		$functionTask = $tm->create([
+			'type_id' => $functionTypeId,
+		]);
+		$classTask = $tm->create([
+			'type_id' => $classTypeId,
+		]);
+		$hashTask = $tm->create([
+			'type_id' => $hashTypeId,
+		]);
+
+		//Запускаем выполнение всех задач со своим time_getter
+		$tm->run([
+			'callbacks_hash' => [
+				'object' => new TasksCallbackClass(),
+			],
+		]);
+
+		//Проверяем, что вышло
+		$expectedLogStringsList = [];
+		for ($a = 10; $a <= 100; $a+=10) {
+			$expectedLogStringsList[] = "$a;";
+		}
+
+		$tasksList = $tm->getList();
+
+		//Каждая из трёх задач обновляется 5 раз - итого 15
+		$this->assertEquals(15, $progressUpdatesAmount);
+
+		//В итоге в БД должно быть 4 задачи с прогрессом 100, в статусе DONE.
+		//У наших выполненных - по 5 записей в логе.
+		foreach ($tasksList as $task) {
+			$this->assertEquals($tm::DONE, $task->state_id);
+			if ($task->id > 1) {
+				$this->assertEquals($expectedLogStringsList, $tm->getLogTextsList(['task_ids' => $task->id]));
+			}
+		}
+	}
+
+
+
+	public function testRunWithException () {
+		$tm     = $this->_initStorage();
+		$typeId = $this->_createType($tm, [
+			'code'             => 'function',
+			'callback_type_id' => $tm::FUNCTION,
+			'callback_method'  => '\S5\TasksManager\tasksExceptionFunction',
+		]);
+		$taskId = $tm->create(['type_id' => $typeId]);
+
+		$tm->run();
+
+		$this->assertEquals(['bug'], $tm->getLogTextsList());
 	}
 
 
@@ -328,8 +312,10 @@ class TasksManagerTest extends \S5\TestCase {
 	private function _initStorage (array $params = []): TasksManager {
 		$tm = new TasksManager(
 			$params + [
-			'dbAdapter' => $this->_pdoAdapter,
-			'dbUtils'   => $this->_dbUtils,
+			'dbAdapter'           => $this->_dbAdapter,
+			'dbUtils'             => $this->_dbUtils,
+			'progressUpdateDelay' => 2,
+			'lockFilePath'        => __DIR__.'/files/.lock',
 		]);
 		$tm->deleteStorage();
 		$tm->initStorage();
@@ -359,7 +345,7 @@ class TasksManagerTest extends \S5\TestCase {
 		foreach ($typeIdsList as $typeId) {
 			foreach ($stateIdsList as $stateId) {
 				for ($a = 1; $a <= 2; $a++) {
-					$taskId = $tm->create(['type_id' => $typeId, 'state_id' => $stateId, 'log' => $a]);
+					$taskId = $tm->create(['type_id' => $typeId, 'state_id' => $stateId]);
 				}
 			}
 		}
@@ -390,4 +376,10 @@ class TasksCallbackClass {
 	public function run (\Closure $taskUpdater, array $params) {
 		tasksCallbackFunction($taskUpdater, $params);
 	}
+}
+
+
+
+function tasksExceptionFunction (\Closure $taskUpdater, array $params) {
+	throw new \Exception('bug');
 }

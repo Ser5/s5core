@@ -12,3 +12,4 @@ composer.lock
 /tests/S5/StaticCache/files/
 /tests/S5/Assets/**/min/
 /tests/S5/Assets/Assetic/files/db.php
+/tests/S5/TasksManager/files/

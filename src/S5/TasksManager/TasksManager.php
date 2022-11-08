@@ -2,6 +2,7 @@
 namespace S5\TasksManager;
 use S5\Db\Adapters\IAdapter;
 use S5\Db\DbUtils;
+use S5\IO\File;
 use Respect\Validation\Validator as v;
 
 
@@ -20,6 +21,8 @@ class TasksManager {
 	protected IAdapter $dbAdapter;
 	protected DbUtils  $dbUtils;
 	protected int      $oldTasksKeepPeriod;
+	protected File     $lockFile;
+	protected mixed    $runTimeGetter;
 
 	protected \Respect\Validation\Validator $createValidator;
 	protected \Respect\Validation\Validator $editValidator;
@@ -28,6 +31,7 @@ class TasksManager {
 	protected string $taskTypes     = 'task_types';
 	protected string $taskStates    = 'task_states';
 	protected string $tasksQueue    = 'tasks_queue';
+	protected string $taskLogs      = 'task_logs';
 
 
 	public function __construct (array $params) {
@@ -35,12 +39,16 @@ class TasksManager {
 			'tableNamesPrefix'    => '',
 			'progressUpdateDelay' => 1,
 			'oldTasksKeepPeriod'  => 86400*30,
+			'lockFilePath'        => '',
+			'runTimeGetter'       => fn()=>time(),
 		];
 
 		$this->dbAdapter           = $p['dbAdapter'];
 		$this->dbUtils             = $p['dbUtils'];
 		$this->progressUpdateDelay = $p['progressUpdateDelay'];
 		$this->oldTasksKeepPeriod  = $p['oldTasksKeepPeriod'];
+		$this->lockFile            = new File($p['lockFilePath']);
+		$this->runTimeGetter       = $p['runTimeGetter'];
 
 		$this->initValidators();
 		$this->initTableNamePrefixes($p['tableNamesPrefix']);
@@ -61,7 +69,6 @@ class TasksManager {
 			->key('state_id', $min1,     false)
 			->key('progress', $progress, false)
 			->key('params',   $string,   false)
-			->key('log',      $string,   false)
 		;
 
 		$this->editValidator = (new v())
@@ -69,14 +76,18 @@ class TasksManager {
 			->key('state_id', $min1,     false)
 			->key('progress', $progress, false)
 			->key('params',   $string,   false)
-			->key('log',      $string,   false)
-			->key('add_log',  $string,   false)
 		;
 
 		$this->listValidator = (new v())
 			->key('ids',       $ids, false)
 			->key('type_ids',  $ids, false)
 			->key('state_ids', $ids, false)
+		;
+
+		$this->getLogsListValidator = (new v())
+			->key('ids',      $ids, false)
+			->key('type_ids', $ids, false)
+			->key('limit',    v::anyOf(v::falseVal(), v::intVal(), v::stringVal()), false)
 		;
 
 		$this->createTypeValidator = (new v())
@@ -101,7 +112,7 @@ class TasksManager {
 
 	protected function initTableNamePrefixes (string $tableNamesPrefix) {
 		if ($tableNamesPrefix) {
-			foreach (['callbackTypes', 'taskTypes','taskStates','tasksQueue'] as $tableName) {
+			foreach (['callbackTypes', 'taskTypes','taskStates','tasksQueue', 'taskLogs'] as $tableName) {
 				$this->$tableName = $tableNamesPrefix . $this->$tableName;
 			}
 		}
@@ -117,7 +128,6 @@ class TasksManager {
 	 *    state_id: int,
 	 *    progress: int,
 	 *    params:   string,
-	 *    log:      string,
 	 * } $data
 	 * @return int
 	 */
@@ -137,19 +147,11 @@ class TasksManager {
 	 *    state_id: int,
 	 *    progress: int,
 	 *    params:   string,
-	 *    log:      string,
-	 *    add_log:  string,
 	 * } $data
 	 * @return int
 	 */
 	public function edit (int $taskId, array $data) {
 		$this->assert($data, $this->editValidator);
-		if (isset($data['add_log']) and !isset($data['log'])) {
-			$addLog = $this->dbAdapter->escape($data['add_log']);
-			$query  = "UPDATE $this->tasksQueue SET log = CONCAT(log, '$addLog') WHERE id = $taskId";
-			$this->dbAdapter->query($query);
-		}
-		unset($data['add_log']);
 		if ($data) {
 			$this->dbAdapter->query($this->dbUtils->getUpdate($this->tasksQueue, 'id', $taskId, $data));
 		}
@@ -233,103 +235,147 @@ class TasksManager {
 
 
 
-	/**
-	 * Запуск задачи - если очередь свободна и есть задачи для запуска.
-	 *
-	 * @param array{
-	 *    callbacks_hash: array|false,
-	 *    db_adapter:     IAdapter|null,
-	 *    time_getter:    callable|false,
-	 * } $params
-	 * @return int|false
-	 */
-	public function run (array $params = []) {
-		$p = $params + [
-			'callbacks_hash' => false,
-			'db_adapter'     => null,
-			'time_getter'    => false,
-		];
-		if (!$p['db_adapter']) {
-			$p['db_adapter'] = $this->dbAdapter;
+	public function createLogsList (int $taskId, array $logStringsList) {
+		if ($logStringsList) {
+			$query = "INSERT INTO $this->taskLogs (task_id, text) VALUES\n";
+			foreach ($logStringsList as $logString) {
+				$query .= ("($taskId, ". $this->dbAdapter->quote($logString) ."),\n");
+			}
+			$query = mb_substr($query, 0, -2, 'UTF-8');
+			$this->dbAdapter->query($query);
 		}
-
-		$dbUtils   = $this->dbUtils;
-		$ranTaskId = false;
-
-		$dbUtils->begin();
-		try {
-			$ranTaskId = $this->runInTransaction($p);
-			$dbUtils->commit();
-		} catch (\Exception $e) {
-			$dbUtils->rollback();
-		}
-
-		return $ranTaskId;
 	}
 
 
 
 	/**
-	 * Логика работы с задачей, запускается в run() внутри транзакции.
+	 * Добыча списка логов.
 	 *
-	 * @param  array $params
-	 * @return int|false
+	 * @param array{
+	 *    ids:      false|int|string|array,
+	 *    task_ids: false|int|string|array,
+	 *    limit:    false|int|string|array,
+	 * } $params
 	 */
-	protected function runInTransaction (array $params) {
-		$dbAdapter  = $params['db_adapter'];
-		$tasksQueue = $this->tasksQueue;
-		$timeGetter = $params['time_getter'] ?: fn()=>time();
+	public function getLogTextsList (array $params = []): array {
+		$p = $params + [
+			'ids'      => false,
+			'task_ids' => false,
+			'limit'    => false,
+		];
+		$this->assert($p, $this->getLogsListValidator);
 
-		//Запущено уже чё?
-		$query = "SELECT id FROM $tasksQueue WHERE state = ".static::RUNNING." FOR UPDATE";
-		if ($dbAdapter->getObject($query)) {
-			return false;
+		//WHERE
+		$whereString = '';
+		if ($p['ids']) {
+			$whereString .= ('id IN (' . $this->dbUtils->getIntsString($p['ids']) . ') AND ');
+		}
+		if ($p['task_ids']) {
+			$whereString .= ('task_id IN (' . $this->dbUtils->getIntsString($p['task_ids']) . ') AND ');
 		}
 
-		//Есть новые задачи?
+		//LIMIT
+		$limitString = (!$p['limit'] ? '' : 'LIMIT '.$this->dbUtils->getLimitString($p['limit']));
+
+		$query =
+			"SELECT text
+			FROM $this->taskLogs
+			WHERE $whereString 1
+			ORDER BY id
+			$limitString
+			";
+
+		$logsList = [];
+		foreach ($this->dbAdapter->getObjectsList($query) as $e) {
+			$logsList[] = $e->text;
+		}
+
+		return $logsList;
+	}
+
+
+
+	/**
+	 * Запуск задач - если очередь свободна и есть задачи для запуска.
+	 *
+	 * @param array{
+	 *    callbacks_hash: array|false,
+	 * } $params
+	 * @return array
+	 */
+	public function run (array $params = []): array {
+		$p = $params + [
+			'callbacks_hash' => [],
+		];
+
+		$tasksList = [];
+
+		if (
+			$this->lockFile->lock()       and
+			!$this->isRunningTaskExists() and
+			$tasksList = $this->getNewTasksList()
+		) {
+			foreach ($tasksList as $task) {
+				$this->runOneTask($p['callbacks_hash'], $task);
+			}
+			$this->lockFile->unlock();
+		}
+
+		return array_map(fn($t)=>$t->id, $tasksList);
+	}
+
+
+
+	protected function isRunningTaskExists (): bool {
+		$query = "SELECT id FROM $this->tasksQueue WHERE state_id = ".static::RUNNING;
+		return boolval($this->dbAdapter->getObject($query));
+	}
+
+
+
+	protected function getNewTasksList (): array {
 		$query =
 			"SELECT
 				queue.*,
 				types.callback_type_id AS _callback_type_id,
 				types.callback_source  AS _callback_source,
 				types.callback_method  AS _callback_method
-			FROM $tasksQueue
-			INNER JOIN $this->taskTypes AS types ON types.id = queue.task_type_id
-			WHERE state = ".static::NEW.".
+			FROM $this->tasksQueue      AS queue
+			INNER JOIN $this->taskTypes AS types ON types.id = queue.type_id
+			WHERE state_id = ".static::NEW.".
 			ORDER BY id
-			LIMIT 1
-			FOR UPDATE
 			";
-		$task = $dbAdapter->getObject($query);
-		if (!$task) {
-			return false;
-		}
+		return $this->dbAdapter->getObjectsList($query);
+	}
+
+
+
+	protected function runOneTask (array $callbacksHash, object $task) {
+		$dbAdapter  = $this->dbAdapter;
+		$tasksQueue = $this->tasksQueue;
+		$timeGetter = $this->runTimeGetter;
 
 		//Берём новую задачу в работу - ставим ей статус "Выполняется"
-		$query = "UPDATE $tasksQueue SET state = ".static::RUNNING.", progress = 0 WHERE id = $task->id";
+		$query = "UPDATE $tasksQueue SET state_id = ".static::RUNNING.", progress = 0 WHERE id = $task->id";
 		$dbAdapter->query($query);
 
-		$lastUpdateTs = $timeGetter();
-		$logString    = '';
-		$taskUpdater  = function ($progress, string $addLogString, ?bool $isDone = null) use ($dbAdapter, $tasksQueue, $timeGetter, $task, &$lastUpdateTs, &$logString) {
-			$nowTs      = $timeGetter();
-			$progress   = (int)round($progress);
-			$logString .= $addLogString;
+		$lastUpdateTs   = $timeGetter();
+		$logStringsList = [];
+
+		$taskUpdater = function ($progress, string $addLogString, ?bool $isDone = null) use ($dbAdapter, $timeGetter, $task, &$lastUpdateTs, &$logStringsList) {
+			$nowTs            = $timeGetter();
+			$progress         = (int)round($progress);
+			$logStringsList[] = $addLogString;
 			if (is_null($isDone)) {
 				$isDone = ($progress == 100);
 			} elseif ($isDone === true) {
 				$progress = 100;
 			}
 			if ($isDone or $nowTs >= $lastUpdateTs + $this->progressUpdateDelay) {
-				$logString = $dbAdapter->quote($logString);
-				$setString = "progress = $progress, log = CONCAT(log, $logString)";
-				if ($isDone) {
-					$setString .= ", state = ".static::DONE;
-				}
-				$query = "UPDATE $tasksQueue SET $setString WHERE id = $task->id";
-				$dbAdapter->query($query);
-				$logString    = '';
-				$lastUpdateTs = $nowTs;
+				$this->setProgressAndDoneState($task->id, $progress, $isDone);
+				$this->createLogsList($task->id, $logStringsList);
+				$logStringsList = [];
+				$lastUpdateTs   = $nowTs;
 			}
 		};
 
@@ -341,28 +387,42 @@ class TasksManager {
 				$callback = [$task->_callback_source, $task->_callback_method];
 			break;
 			case static::HASH_METHOD:
-				if (!$p['callbacks_hash']) {
+				if (!$callbacksHash) {
 					throw new \InvalidArgumentException("Не передан callbacks_hash");
 				}
-				$callback = [$p['callbacks_hash'][$task->_callback_source], $task->_callback_method];
+				$callback = [$callbacksHash[$task->_callback_source], $task->_callback_method];
 			break;
 		}
 
 		$taskParamsList = $task->params ? [unserialize($task->params)] : [];
-		call_user_func($callback, $taskUpdater, $taskParamsList);
+		try {
+			call_user_func($callback, $taskUpdater, $taskParamsList);
+		} catch (\Throwable $e) {
+			$query = "UPDATE $this->tasksQueue SET state_id = ".static::ERROR." WHERE id = $task->id";
+			$dbAdapter->query($query);
+			$this->createLogsList($task->id, [$e->getMessage()]);
+		}
+	}
 
-		return $task->id;
+
+
+	protected function setProgressAndDoneState (int $taskId, int $progress, bool $isDone) {
+		$setString = "progress = $progress";
+		if ($isDone) {
+			$setString .= ", state_id = ".static::DONE;
+		}
+		$query = "UPDATE $this->tasksQueue SET $setString WHERE id = $taskId";
+		$this->dbAdapter->query($query);
 	}
 
 
 
 	/**
 	 * Удаление старых выполненных задач.
-	 * @return int
 	 */
 	protected function deleteOldList (): int {
 		$deleteTs = date('Y-m-d H:i:s', time() - $this->oldTasksKeepPeriod);
-		$query    = "DELETE FROM $tasksQueue WHERE state IN (".static::ERROR.','.static::DONE.") AND created_at <= '$deleteTs'";
+		$query    = "DELETE FROM $tasksQueue WHERE state_id IN (".static::ERROR.','.static::DONE.") AND created_at <= '$deleteTs'";
 		$this->dbAdapter->query($query);
 		return $this->dbAdapter->getAffectedRows();
 	}
@@ -492,7 +552,6 @@ class TasksManager {
 				state_id    int      not null default 1,
 				progress    int      not null default 0,
 				params      text     not null default '',
-				log         text     not null default '',
 				created_at  datetime not null default current_timestamp,
 				updated_at  datetime not null default current_timestamp on update current_timestamp,
 				started_at  datetime null,
@@ -504,11 +563,23 @@ class TasksManager {
 			) ENGINE=InnoDB;
 			";
 		$dbAdapter->query($query);
+
+		$query =
+			"CREATE TABLE $this->taskLogs (
+				id      int auto_increment primary key,
+				task_id int  not null,
+				text    text not null,
+				index task_ix (task_id),
+				foreign key (task_id) references $this->tasksQueue(id) on delete cascade
+			) ENGINE=InnoDB;
+			";
+		$dbAdapter->query($query);
 	}
 
 
 
 	public function deleteStorage () {
+		$this->dbAdapter->query("DROP TABLE IF EXISTS $this->taskLogs");
 		$this->dbAdapter->query("DROP TABLE IF EXISTS $this->tasksQueue");
 		$this->dbAdapter->query("DROP TABLE IF EXISTS $this->taskTypes");
 		$this->dbAdapter->query("DROP TABLE IF EXISTS $this->taskStates");
