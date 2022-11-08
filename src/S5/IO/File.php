@@ -257,13 +257,13 @@ class File extends Item {
 
 
 
-	public function lock (string $openMode, int $lockOperation, int &$wouldBlock = 0) {
+	public function lock (string $openMode = 'c+', int $lockOperation =  LOCK_EX|LOCK_NB, int &$wouldBlock = 0): bool {
 		if ($lockOperation == LOCK_UN) {
 			$this->unlock();
-			return;
+			return true;
 		}
 		if ($this->_isLocked) {
-			return;
+			return false;
 		}
 		$this->_createDir();
 		$this->open($openMode);
@@ -289,7 +289,7 @@ class File extends Item {
 
 
 
-	public function isLocked () {
+	public function isLocked (): bool {
 		return $this->_isLocked;
 	}
 
