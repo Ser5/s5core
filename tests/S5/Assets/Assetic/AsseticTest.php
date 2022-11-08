@@ -120,7 +120,7 @@ class AsseticTest extends \S5\TestCase {
 
 
 	private function _prepareNpmDir () {
-		if (!$this->_destModulesFile->isExists() or $this->_srcModulesFile->isMtimeNewer($this->_destModulesFile)) {
+		if (!is_dir("$this->_npmDir/node_modules/") or !$this->_destModulesFile->isExists() or $this->_srcModulesFile->isMtimeNewer($this->_destModulesFile)) {
 			$this->_clearNpmDir();
 			$this->_srcModulesFile->copy($this->_destModulesFile);
 			passthru("cd \"$this->_npmDir\" && " . $this->_destModulesFile->getContents());
