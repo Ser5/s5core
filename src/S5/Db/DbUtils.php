@@ -213,7 +213,7 @@ class DbUtils {
 					$limitString = '';
 				}
 			} else {
-				throw new \InvalidArgumentException("More than 2 values in array");
+				throw new \InvalidArgumentException("\$limit не должен содержать более двух значений");
 			}
 		} elseif (ctype_digit((string)$limit)) {
 			$limitString = $limit;
@@ -223,7 +223,7 @@ class DbUtils {
 			$limitString = '';
 		}
 		if (preg_match('/[^\d\s,]/', $limitString)) {
-			throw new \InvalidArgumentException("Wrong limit result: [$limitString]");
+			throw new \InvalidArgumentException("Неверный результат генерации LIMIT: [$limitString]");
 		}
 		return $limitString;
 	}
