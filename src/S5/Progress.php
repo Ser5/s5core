@@ -41,22 +41,22 @@ namespace S5;
  * - get***Time()
  *
  * Для целей тестирования можно переназначить функцию, возвращающую текущее время,
- * чтобы это был не time() - через статический метод setTimeGetter().
- * Статический он затем, чтобы в конструкторе тоже срабатывал.
+ * чтобы это был не time() - через setTimeGetter().
  *
  * resetTimeGetter() возвращает time() на место.
  */
 class Progress {
-	protected static \Closure $timeGetter;
+	protected \Closure $timeGetter;
+	protected int      $unitsAmount;
+	protected int      $progress;
+	protected int      $startTime;
 
-	protected int $unitsAmount;
-	protected int $progress = 0;
-	protected int $startTime;
 
-
-	public function __construct (int $unitsAmount) {
-		$this->unitsAmount = $unitsAmount;
-		$this->startTime   = (static::$timeGetter)();
+	public function __construct (array $params) {
+		$this->timeGetter  = $params['time_getter']  ?? fn()=>time();
+		$this->unitsAmount = $params['units_amount'] ?? 100;
+		$this->startTime   = $params['start_time']   ?? ($this->timeGetter)();
+		$this->progress    = $params['progress']     ?? 0;
 	}
 
 
@@ -71,7 +71,7 @@ class Progress {
 
 	public function restart () {
 		$this->progress  = 0;
-		$this->startTime = (static::$timeGetter)();
+		$this->startTime = ($this->timeGetter)();
 	}
 
 	public function end () {
@@ -105,28 +105,25 @@ class Progress {
 
 
 	public function getElapsedTime (): int {
-		return (static::$timeGetter)() - $this->startTime;
+		return ($this->timeGetter)() - $this->startTime;
 	}
 
 	public function getLeftTime (): int {
 		$elapsedFraction = $this->progress / $this->unitsAmount;
 		$leftFraction    = 1 - $elapsedFraction;
 		$ratio           = $leftFraction / $elapsedFraction;
-		$leftTime        = ((static::$timeGetter)() - $this->startTime) * $ratio;
+		$leftTime        = (($this->timeGetter)() - $this->startTime) * $ratio;
 		return round($leftTime, 0, PHP_ROUND_HALF_DOWN);
+	}
+
+	/**
+	 * Возвращает данные по оставшемуся времени: всего секунд, часы, минуты, секунды, строку со вмененем вида "12:34:56".
+	 */
+	public function getLeftTimeData (): ProgressTimeData {
+		return new ProgressTimeData($this->getLeftTime());
 	}
 
 	public function getTotalTime (): int {
 		return $this->getElapsedTime() + $this->getLeftTime();
-	}
-
-
-
-	public static function setTimeGetter (\Closure $getter) {
-		static::$timeGetter = $getter;
-	}
-
-	public static function resetTimeGetter () {
-		static::$timeGetter = fn()=>time();
 	}
 }
