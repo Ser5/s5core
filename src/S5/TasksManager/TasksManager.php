@@ -179,13 +179,23 @@ class TasksManager {
 		$whereString = $this->getListWhereString($params);
 
 		$query =
-			"SELECT *
-			FROM $this->tasksQueue
+			"SELECT
+				q.*,
+				t.name AS _type_name,
+				s.name AS _state_name
+			FROM       $this->tasksQueue q
+			INNER JOIN $this->taskTypes  t ON t.id = q.type_id
+			INNER JOIN $this->taskStates s ON s.id = q.state_id
 			WHERE $whereString 1
 			ORDER BY id
 			";
 
-		return $this->dbAdapter->getObjectsList($query);
+		$list = [];
+
+		foreach ($this->dbAdapter->getObjectsList($query) as $task) {
+			$task->_progress = new Progress(['start_time' => strtotime($task->started_at), 'progress' => $task->progress]);
+		}
+		return $list;
 	}
 
 
