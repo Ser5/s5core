@@ -55,8 +55,20 @@ class Progress {
 	public function __construct (array $params) {
 		$this->timeGetter  = $params['time_getter']  ?? fn()=>time();
 		$this->unitsAmount = $params['units_amount'] ?? 100;
-		$this->startTime   = $params['start_time']   ?? ($this->timeGetter)();
 		$this->progress    = $params['progress']     ?? 0;
+
+		if (!isset($params['start_time']) or !$params['start_time']) {
+			$this->startTime = ($this->timeGetter)();
+		} elseif (ctype_digit((string)$params['start_time'])) {
+			$this->startTime = $params['start_time'];
+		} elseif (is_string($params['start_time'])) {
+			$this->startTime = strtotime($params['start_time']);
+			if (!$this->startTime) {
+				throw new \InvalidArgumentException("Не удалось разобрать start_time как строку даты-времени: [$params[start_time]]");
+			}
+		} else {
+			throw new \InvalidArgumentException("Неизвестное значение start_time: [$params[start_time]]");
+		}
 	}
 
 
