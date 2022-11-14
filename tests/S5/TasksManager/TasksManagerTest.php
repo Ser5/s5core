@@ -3,6 +3,7 @@ namespace S5\TasksManager;
 use S5\Db\Adapters\PdoAdapter;
 use S5\Db\Adapters\CallbackAdapter;
 use S5\Db\DbUtils;
+use S5\Progress;
 
 
 
@@ -72,6 +73,9 @@ class TasksManagerTest extends \S5\TestCase {
 			'updated_at'  => $gotTask->updated_at,
 			'started_at'  => null,
 			'finished_at' => null,
+			'_type_name'  => 'Тест',
+			'_state_name' => 'Новая',
+			'_progress'   => new Progress(['start_time' => $gotTask->started_at]),
 		];
 		$this->assertEquals($expectedTask, $gotTask);
 		$this->assertEquals($gotTask->created_at, $gotTask->updated_at);
@@ -90,6 +94,9 @@ class TasksManagerTest extends \S5\TestCase {
 			'updated_at'  => $gotTask->updated_at,
 			'started_at'  => null,
 			'finished_at' => null,
+			'_type_name'  => 'Тест',
+			'_state_name' => 'Готово',
+			'_progress'   => new Progress(['start_time' => $gotTask->started_at, 'progress' => 100]),
 		];
 		$this->assertEquals($expectedTask, $gotTask);
 
@@ -123,6 +130,9 @@ class TasksManagerTest extends \S5\TestCase {
 			'updated_at'  => $gotTask->updated_at,
 			'started_at'  => null,
 			'finished_at' => null,
+			'_type_name'  => 'Тест',
+			'_state_name' => 'В работе',
+			'_progress'   => new Progress(['start_time' => $gotTask->started_at]),
 		];
 		$this->assertEquals($expectedTask, $gotTask);
 
@@ -140,6 +150,9 @@ class TasksManagerTest extends \S5\TestCase {
 			'updated_at'  => $gotTask->updated_at,
 			'started_at'  => null,
 			'finished_at' => null,
+			'_type_name'  => 'Тест',
+			'_state_name' => 'Готово',
+			'_progress'   => new Progress(['start_time' => $gotTask->started_at, 'progress' => 100]),
 		];
 		$this->assertEquals($expectedTask, $gotTask);
 
@@ -327,6 +340,7 @@ class TasksManagerTest extends \S5\TestCase {
 	private function _createType (TasksManager $tm, array $params = []): int {
 		$p = $params + [
 			'code'             => 'test',
+			'name'             => 'Тест',
 			'callback_type_id' => $tm::FUNCTION,
 			'callback_method'  => 'func'
 		];

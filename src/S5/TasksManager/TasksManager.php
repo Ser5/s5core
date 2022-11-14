@@ -160,7 +160,7 @@ class TasksManager {
 
 
 	public function get (int $id): ?object {
-		return $this->getList(['ids' => $id])[0] ?: null;
+		return $this->getList(['ids' => $id])[0] ?? null;
 	}
 
 
@@ -176,7 +176,7 @@ class TasksManager {
 	 * @return array
 	 */
 	public function getList (array $params = []): array {
-		$whereString = $this->getListWhereString($params);
+		$whereString = $this->getListWhereString($params, true);
 
 		$query =
 			"SELECT
@@ -187,13 +187,16 @@ class TasksManager {
 			INNER JOIN $this->taskTypes  t ON t.id = q.type_id
 			INNER JOIN $this->taskStates s ON s.id = q.state_id
 			WHERE $whereString 1
-			ORDER BY id
+			ORDER BY q.id
 			";
 
-		$list = [];
-
-		foreach ($this->dbAdapter->getObjectsList($query) as $task) {
-			$task->_progress = new Progress(['start_time' => strtotime($task->started_at), 'progress' => $task->progress]);
+		$list = $this->dbAdapter->getObjectsList($query);
+		foreach ($list as $task) {
+			$task->id        = (int)$task->id;
+			$task->type_id   = (int)$task->type_id;
+			$task->state_id  = (int)$task->state_id;
+			$task->progress  = (int)$task->progress;
+			$task->_progress = new \S5\Progress(['start_time' => strtotime($task->started_at), 'progress' => $task->progress]);
 		}
 		return $list;
 	}
@@ -211,7 +214,7 @@ class TasksManager {
 	 * @return int
 	 */
 	public function deleteList (array $params = []): int {
-		$whereString = $this->getListWhereString($params);
+		$whereString = $this->getListWhereString($params, false);
 
 		$query = "DELETE FROM $this->tasksQueue WHERE $whereString 1";
 		$this->dbAdapter->query($query);
@@ -221,7 +224,7 @@ class TasksManager {
 
 
 
-	protected function getListWhereString (array $params = []): string {
+	protected function getListWhereString (array $params, bool $isUseAlias): string {
 		$p = $params + [
 			'ids'       => false,
 			'type_ids'  => false,
@@ -230,14 +233,15 @@ class TasksManager {
 		$this->assert($p, $this->listValidator);
 
 		$whereString = '';
+		$t = ($isUseAlias ? 'q.' : '');
 		if ($p['ids']) {
-			$whereString .= 'id IN (' . $this->dbUtils->getIntsString($p['ids']) . ') AND ';
+			$whereString .= "{$t}id IN (" . $this->dbUtils->getIntsString($p['ids']) . ') AND ';
 		}
 		if ($p['type_ids']) {
-			$whereString .= 'type_id IN (' . $this->dbUtils->getIntsString($p['type_ids']) . ') AND ';
+			$whereString .= "{$t}type_id IN (" . $this->dbUtils->getIntsString($p['type_ids']) . ') AND ';
 		}
 		if ($p['state_ids']) {
-			$whereString .= 'state_id IN (' . $this->dbUtils->getIntsString($p['state_ids']) . ') AND ';
+			$whereString .= "{$t}state_id IN (" . $this->dbUtils->getIntsString($p['state_ids']) . ') AND ';
 		}
 
 		return $whereString;
@@ -547,8 +551,8 @@ class TasksManager {
 			"INSERT INTO $this->taskStates
 			(code, name)
 			VALUES
-			('new',     'Новое'),
-			('running', 'Выполняется'),
+			('new',     'Новая'),
+			('running', 'В работе'),
 			('paused',  'Запущена'),
 			('error',   'Ошибка'),
 			('done',    'Готово')
