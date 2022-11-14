@@ -196,7 +196,7 @@ class TasksManager {
 			$task->type_id   = (int)$task->type_id;
 			$task->state_id  = (int)$task->state_id;
 			$task->progress  = (int)$task->progress;
-			$task->_progress = new \S5\Progress(['start_time' => strtotime($task->started_at), 'progress' => $task->progress]);
+			$task->_progress = new \S5\Progress(['startTime' => strtotime($task->started_at), 'progress' => $task->progress]);
 		}
 		return $list;
 	}

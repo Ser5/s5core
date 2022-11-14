@@ -39,11 +39,6 @@ namespace S5;
  * - get***Units()
  * - get***Percents()
  * - get***Time()
- *
- * Для целей тестирования можно переназначить функцию, возвращающую текущее время,
- * чтобы это был не time() - через setTimeGetter().
- *
- * resetTimeGetter() возвращает time() на место.
  */
 class Progress {
 	protected \Closure $timeGetter;
@@ -53,21 +48,21 @@ class Progress {
 
 
 	public function __construct (array $params) {
-		$this->timeGetter  = $params['time_getter']  ?? fn()=>time();
-		$this->unitsAmount = $params['units_amount'] ?? 100;
-		$this->progress    = $params['progress']     ?? 0;
+		$this->timeGetter  = $params['timeGetter']  ?? fn()=>time();
+		$this->unitsAmount = $params['unitsAmount'] ?? 100;
+		$this->progress    = $params['progress']    ?? 0;
 
-		if (!isset($params['start_time']) or !$params['start_time']) {
+		if (!isset($params['startTime']) or !$params['startTime']) {
 			$this->startTime = ($this->timeGetter)();
-		} elseif (ctype_digit((string)$params['start_time'])) {
-			$this->startTime = $params['start_time'];
-		} elseif (is_string($params['start_time'])) {
-			$this->startTime = strtotime($params['start_time']);
+		} elseif (ctype_digit((string)$params['startTime'])) {
+			$this->startTime = $params['startTime'];
+		} elseif (is_string($params['startTime'])) {
+			$this->startTime = strtotime($params['startTime']);
 			if (!$this->startTime) {
-				throw new \InvalidArgumentException("Не удалось разобрать start_time как строку даты-времени: [$params[start_time]]");
+				throw new \InvalidArgumentException("Не удалось разобрать startTime как строку даты-времени: [$params[startTime]]");
 			}
 		} else {
-			throw new \InvalidArgumentException("Неизвестное значение start_time: [$params[start_time]]");
+			throw new \InvalidArgumentException("Неизвестное значение startTime: [$params[startTime]]");
 		}
 	}
 

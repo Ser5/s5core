@@ -21,8 +21,8 @@ class ProgressTest extends \S5\TestCase {
 		$time = time();
 
 		$p = new Progress([
-			'units_amount' => $unitsAmount,
-			'time_getter'  => function () use (&$time) { return $time; }, //Вариант с fn()=>$time тупит
+			'unitsAmount' => $unitsAmount,
+			'timeGetter'  => function () use (&$time) { return $time; }, //Вариант с fn()=>$time тупит
 		]);
 
 		$gotData = [];
@@ -52,9 +52,9 @@ class ProgressTest extends \S5\TestCase {
 		//За 1 минуту уже выполнен 1%.
 		//Ещё осталось выполнить 99% за 99 минут это 1 час, 39 минут, 0 секунд.
 		$p = new Progress([
-			'start_time'  => $time,
+			'startTime'  => $time,
 			'progress'    => 1,
-			'time_getter' => fn()=>$time+60,
+			'timeGetter' => fn()=>$time+60,
 		]);
 		$td = $p->getLeftTimeData();
 		$this->assertEquals('1:39:00', $td->hms);
