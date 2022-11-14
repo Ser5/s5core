@@ -315,7 +315,7 @@ class TasksManager {
 	 * @param array{
 	 *    callbacks_hash: array|false,
 	 * } $params
-	 * @return array
+	 * @return array ID обработанных задач
 	 */
 	public function run (array $params = []): array {
 		$p = $params + [

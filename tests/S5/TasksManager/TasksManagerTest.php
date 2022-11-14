@@ -1,9 +1,11 @@
 <?
 namespace S5\TasksManager;
-use S5\Db\Adapters\PdoAdapter;
-use S5\Db\Adapters\CallbackAdapter;
+
+use S5\IO\File;
 use S5\Db\DbUtils;
 use S5\Progress;
+use S5\Db\Adapters\PdoAdapter;
+use S5\Db\Adapters\CallbackAdapter;
 
 
 
@@ -318,6 +320,22 @@ class TasksManagerTest extends \S5\TestCase {
 		$tm->run();
 
 		$this->assertEquals(['bug'], $tm->getLogTextsList());
+	}
+
+
+
+	public function testLockedFileRun () {
+		$tm     = $this->_initStorage();
+		$typeId = $this->_createType($tm);
+		$taskId = $tm->create(['type_id' => $typeId]);
+
+		$lockFile = new File(__DIR__.'/files/.lock');
+
+		$lockFile->lock();
+		$this->assertEquals([], $tm->run());
+
+		$lockFile->unlock();
+		$this->assertEquals([1], $tm->run());
 	}
 
 
