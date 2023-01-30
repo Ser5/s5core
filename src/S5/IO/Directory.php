@@ -124,9 +124,7 @@ class Directory extends Item {
 			return;
 		}
 		//Получение списка файлов и подкаталогов.
-		$itemsList = scandir($this->getPath());
-		array_shift($itemsList); //.
-		array_shift($itemsList); //..
+		$itemsList = array_diff(scandir($this->getPath()), ['.', '..']);
 		foreach ($itemsList as $e) {
 			$fullItemPath = $this->getPath()."/$e";
 			if (is_dir($fullItemPath)) {
