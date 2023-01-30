@@ -64,7 +64,7 @@ use Symfony\Component\Console\{
 class DelegateCommand extends Command {
 	protected string $name;
 	protected string $description;
-	protected mixed  $callback;
+	protected        $callback;
 	protected array  $options = [];
 
 
