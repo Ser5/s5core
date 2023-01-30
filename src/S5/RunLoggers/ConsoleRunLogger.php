@@ -1,9 +1,9 @@
 <?
-namespace S5\RunLoggers;
+namespace S5\RunLogger;
 
 class ConsoleRunLogger extends BaseRunLogger {
 	private static $ok      = "\033[0;32m";
-	private static $info    = "\033[0;94m";
+	private static $info    = "\033[0;96m";
 	private static $warning = "\033[0;33m";
 	private static $error   = "\033[0;31m";
 	private static $close   = "\033[0m";
