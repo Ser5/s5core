@@ -41,12 +41,28 @@ class TasksManager {
 
 	public function __construct (array $params) {
 		$p = $params + [
+			'dbAdapter'           => false,
+			'dbUtils'             => false,
 			'tableNamesPrefix'    => '',
 			'progressUpdateDelay' => 1,
 			'oldTasksKeepPeriod'  => 86400*30,
-			'lockFilePath'        => '',
+			'lockFilePath'        => false,
 			'runTimeGetter'       => fn()=>time(),
 		];
+
+		if (!is_a($p['dbAdapter'], IAdapter::class)) {
+			throw new \InvalidArgumentException("dbAdapter не является объектом \S5\Db\Adapters\IAdapter");
+		}
+		if (!is_a($p['dbUtils'], DbUtils::class)) {
+			throw new \InvalidArgumentException("DbUtils не является объектом \S5\Db\DbUtils");
+		}
+		if (!is_string($p['lockFilePath'])) {
+			throw new \InvalidArgumentException("lockFilePath - не передан путь к lock-файлу");
+		}
+		$lockDirPath = dirname($p['lockFilePath']);
+		if (!is_dir($lockDirPath) and !is_writable($lockDirPath)) {
+			throw new \InvalidArgumentException("Директория lock-файла недоступна для записси: $lockDirPath");
+		}
 
 		$this->dbAdapter           = $p['dbAdapter'];
 		$this->dbUtils             = $p['dbUtils'];
@@ -174,32 +190,59 @@ class TasksManager {
 	 *    ids?:       false|int|array<int>|string,
 	 *    type_ids?:  false|int|array<int>|string,
 	 *    state_ids?: false|int|array<int>|string,
+	 *    order_by:   false|string,
+	 *    limit:      false|int|array<int>|string,
 	 * } $params
 	 * @return array
 	 */
 	public function getList (array $params = []): array {
 		$whereString = $this->getListWhereString($params, true);
 
+		$p = $params + [
+			'order_by' => 'q.id',
+			'limit'    => false,
+		];
+
+		$limitString = !$p['limit'] ? '' : 'LIMIT ' . $dbUtils->getLimitString($p['limit']);
+
+		//Основные данные
 		$query =
 			"SELECT
 				q.*,
-				t.name AS _type_name,
-				s.name AS _state_name
+				t.code AS _type_code,  t.name AS _type_name,
+				s.code AS _state_code, s.name AS _state_name
 			FROM       $this->tasksQueue q
 			INNER JOIN $this->taskTypes  t ON t.id = q.type_id
 			INNER JOIN $this->taskStates s ON s.id = q.state_id
 			WHERE $whereString 1
-			ORDER BY q.id
+			ORDER BY $p[order_by]
+			$limitString
 			";
 
 		$list = $this->dbAdapter->getObjectsList($query);
+
+		//Логи
+		$logsList = $this->getLogsList([
+			'task_ids' => array_map(fn($t)=>$t->id, $list),
+		]);
+		$logsHash = [];
+		foreach ($logsList as $e) {
+			$logsHash[$e->task_id][] = $e->text;
+		}
+
+		//Обрабатываем данные и цепляем дополнительные данные
 		foreach ($list as $task) {
+			//Приведение к int
 			$task->id        = (int)$task->id;
 			$task->type_id   = (int)$task->type_id;
 			$task->state_id  = (int)$task->state_id;
 			$task->progress  = (int)$task->progress;
+			//Прогресс
 			$task->_progress = new \S5\Progress(['startTime' => strtotime($task->started_at), 'progress' => $task->progress]);
+			//Логи
+			$task->_logs = $logsHash[$task->id] ?? [];
 		}
+
 		return $list;
 	}
 
@@ -273,7 +316,7 @@ class TasksManager {
 	 *    limit?:    false|int|string|array,
 	 * } $params
 	 */
-	public function getLogTextsList (array $params = []): array {
+	public function getLogsList (array $params = []): array {
 		$p = $params + [
 			'ids'      => false,
 			'task_ids' => false,
@@ -294,19 +337,22 @@ class TasksManager {
 		$limitString = (!$p['limit'] ? '' : 'LIMIT '.$this->dbUtils->getLimitString($p['limit']));
 
 		$query =
-			"SELECT text
+			"SELECT *
 			FROM $this->taskLogs
 			WHERE $whereString 1
-			ORDER BY id
+			ORDER BY task_id, id
 			$limitString
 			";
 
-		$logsList = [];
-		foreach ($this->dbAdapter->getObjectsList($query) as $e) {
-			$logsList[] = $e->text;
-		}
+		$logsList = $this->dbAdapter->getObjectsList($query);
 
 		return $logsList;
+	}
+
+
+
+	public function getLogTextsList (array $params = []): array {
+		return array_map(fn($l)=>$l->id, $this->getLogsList(...$params));
 	}
 
 
