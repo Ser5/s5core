@@ -102,7 +102,7 @@ class Progress {
 
 
 	public function getElapsedPercents (int $precision = 0): int {
-		return round($this->progress / $this->unitsAmount * 100, $precision, PHP_ROUND_HALF_DOWN);
+		return (int)round($this->progress / $this->unitsAmount * 100, $precision, PHP_ROUND_HALF_DOWN);
 	}
 
 	public function getLeftPercents (int $precision = 0): int {
@@ -120,7 +120,7 @@ class Progress {
 		$leftFraction    = 1 - $elapsedFraction;
 		$ratio           = $leftFraction / $elapsedFraction;
 		$leftTime        = (($this->timeGetter)() - $this->startTime) * $ratio;
-		return round($leftTime, 0, PHP_ROUND_HALF_DOWN);
+		return (int)round($leftTime, 0, PHP_ROUND_HALF_DOWN);
 	}
 
 	/**

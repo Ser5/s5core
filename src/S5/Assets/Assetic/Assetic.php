@@ -221,7 +221,7 @@ class Assetic {
 	 * - 002_local_css.js
 	 *
 	 * @param array{
-	 *    type: string|true,
+	 *    type?: string|true,
 	 * } $params
 	 */
 	public function generate (array $params = []) {
@@ -229,7 +229,7 @@ class Assetic {
 			'type' => true,
 		];
 
-		$typesList = ($p['type'] === true ? [static::JS, static::CSS] : [$type]);
+		$typesList = ($p['type'] === true ? [static::JS, static::CSS] : [$p['type']]);
 
 		//Пересоздадим временные папки для каждого типа
 		foreach ($this->typesDataHash as $typeData) {
@@ -248,7 +248,7 @@ class Assetic {
 				foreach ($this->expandUrlsList($urlsList) as $url) {
 					$inputFilesString .= "-i \"$url\" ";
 				}
-				$n         = str_pad($number, 3, '0', STR_PAD_LEFT);
+				$n         = str_pad("$number", 3, '0', STR_PAD_LEFT);
 				$fileName  = "{$n}_$baseFileName.";
 				$fileName .= $typeData['ext'];
 				$tempFile  = new File("$typeData[min_temp_dir]/$fileName");
@@ -349,11 +349,11 @@ class Assetic {
 
 
 
-	public function showConcatenatedJsCode (): string {
+	public function showConcatenatedJsCode () {
 		$this->showConcatenatedCode(static::JS);
 	}
 
-	public function showConcatenatedCssCode (): string {
+	public function showConcatenatedCssCode () {
 		$this->showConcatenatedCode(static::CSS);
 	}
 
@@ -405,9 +405,6 @@ class Assetic {
 
 	/**
 	 * Возвращает все ссылки на файлы js/css из переданного $urlsList, различая директории и файлы.
-	 *
-	 * @param  string $type js/css
-	 * @return array
 	 */
 	protected function expandUrlsList (array $urlsList): array {
 		$list = [];
@@ -454,7 +451,7 @@ class Assetic {
 	protected function getDbData (): array {
 		if (!$this->dbData) {
 			if (!is_file($this->dbFilePath) or !is_readable($this->dbFilePath)) {
-				throw new \InvalidArgumentException("Файл с данными о последней минификации недоступен: [$dbFile]");
+				throw new \InvalidArgumentException("Файл с данными о последней минификации недоступен: [$this->dbFilePath]");
 			}
 			$this->dbData = require $this->dbFilePath;
 		}

@@ -2,11 +2,7 @@
 namespace S5;
 
 class Pimple extends \Pimple\Container {
-	/**
-	 * @param  array $keysList
-	 * @return array
-	 */
-	public function getHash (...$keysList) {
+	public function getHash (...$keysList): array {
 		$hash = [];
 		foreach ($keysList as $key) {
 			if (strpos($key,'-') === false) {
@@ -24,7 +20,7 @@ class Pimple extends \Pimple\Container {
 	/**
 	 * То же, что getHash(), только короче.
 	 */
-	public function __invoke (...$args) {
+	public function __invoke (...$args): array {
 		return $this->getHash(...$args);
 	}
 }

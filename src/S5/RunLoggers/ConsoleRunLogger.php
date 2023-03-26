@@ -2,11 +2,11 @@
 namespace S5\RunLoggers;
 
 class ConsoleRunLogger extends BaseRunLogger {
-	private static $ok      = "\033[0;32m";
-	private static $info    = "\033[0;96m";
-	private static $warning = "\033[0;33m";
-	private static $error   = "\033[0;31m";
-	private static $close   = "\033[0m";
+	protected static string $ok      = "\033[0;32m";
+	protected static string $info    = "\033[0;96m";
+	protected static string $warning = "\033[0;33m";
+	protected static string $error   = "\033[0;31m";
+	protected static string $close   = "\033[0m";
 
 	public function get ($message, $type = false, $level = false) {
 		if ($type and isset(static::$$type)) {

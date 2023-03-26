@@ -3,7 +3,7 @@ namespace S5\Text;
 
 class WordEnding {
 	public static function get (int $number): int {
-		$absNumber = abs($number);
+		$absNumber = (string)abs($number);
 		//Проверить, если последние две цифры составляют число от 10 до 20.
 		if ($absNumber >= 10) {
 			$ten = substr($absNumber, mb_strlen($absNumber, 'UTF-8') - 2, 2);
@@ -27,6 +27,7 @@ class WordEnding {
 			case 1: return $variant1;
 			case 2: return $variant2;
 			case 3: return $variant3;
+			default: throw new \InvalidArgumentException("Неизвестный вариант количества: [$number]");
 		}
 	}
 }

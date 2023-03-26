@@ -4,16 +4,9 @@ namespace S5\Db\Adapters;
 class MysqliAdapter extends AbstractAdapter {
 	protected \mysqli $mysqli;
 
-	public function __construct (\mysqli $mysqli, array $tableNamesPrefix = []) {
-		//parent::construct($tableNamesPrefix);
+	public function __construct (\mysqli $mysqli) {
 		$this->mysqli = $mysqli;
 	}
-
-
-
-	/*public function withTableNamesPrefix (array $tableNamesPrefix): MysqliAdapter {
-		return new static($this->mysqli, $tableNamesPrefix);
-	}*/
 
 
 

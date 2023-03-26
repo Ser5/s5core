@@ -17,10 +17,7 @@ class StaticCache {
 			$this->{$k} = $v;
 		}
 		if (!$this->filePath) {
-			throw new \InvalidArgumentException("filePath required");
-		}
-		if (!is_string($this->filePath)) {
-			throw new \InvalidArgumentException("Invalid filePath, string required");
+			throw new \InvalidArgumentException("filePath не указан");
 		}
 	}
 
@@ -79,7 +76,7 @@ class StaticCache {
 
 	protected function write () {
 		$file = new \S5\IO\File($this->filePath);
-		$file->putContents("<?\nreturn ".var_export($this->data,1).";\n");
+		$file->putContents("<?\nreturn ".var_export($this->data,true).";\n");
 		$this->isDataRead = true;
 	}
 }

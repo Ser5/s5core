@@ -5,7 +5,9 @@ interface IAdapter {
 	//function withTableNamesPrefix (string $tableNamesPrefix): IAdapter;
 
 	function escape (string $string): string;
-	function quote  (string $string): string;
+
+	/** @param string|int $string */
+	function quote ($string): string;
 
 	function query (string $query);
 

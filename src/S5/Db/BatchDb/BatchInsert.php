@@ -1,5 +1,5 @@
 <?
-namespace S5\BatchDb;
+namespace S5\Db\BatchDb;
 
 /**
  * Пакетная вставка данных.
@@ -31,7 +31,7 @@ class BatchInsert extends BatchBase {
 	protected function getValuesString (array $data): string {
 		$fieldValuesString = '';
 		foreach ($data as $k => $v) {
-			$v = $this->adapter->escape($v);
+			$v = $this->dbAdapter->escape($v);
 			$fieldValuesString .= "'$v', ";
 		}
 		$fieldValuesString = mb_substr($fieldValuesString, 0, -2, 'UTF-8');

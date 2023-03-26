@@ -21,9 +21,9 @@ abstract class AbstractAdapter implements IAdapter {
 
 
 
-	public function quote (string $string): string {
+	public function quote ($string): string {
 		if (ctype_digit((string)$string)) {
-			return $string;
+			return (string)$string;
 		} else {
 			return "'".$this->escape($string)."'";
 		}

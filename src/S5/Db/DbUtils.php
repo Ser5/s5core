@@ -85,7 +85,7 @@ class DbUtils {
 	 */
 	public function getIntsList ($ints, $dbFieldName = false): array {
 		if (is_object($ints)) {
-			$ints = $this->getListFromResource($ints, $dbFieldName);
+			$intsList = $this->getListFromResource($ints, $dbFieldName);
 		} elseif (is_array($ints)) {
 			foreach ($ints as $int) {
 				if (!ctype_digit((string)$int)) {
@@ -115,7 +115,7 @@ class DbUtils {
 	 */
 	public function getIntsString ($ints, $dbFieldName = false): string {
 		if (is_object($ints)) {
-			$ints = self::getListFromResource($ints, $dbFieldName);
+			$intsString = join(',', $this->getListFromResource($ints, $dbFieldName));
 		} elseif (is_array($ints)) {
 			$intsString = join(',', $ints);
 		} else {
@@ -129,9 +129,16 @@ class DbUtils {
 
 
 
-	public function getStringsString ($strings/*, $dbFieldName = false*/): string {
+	/**
+	 * Возвращает строку, состоящую из строк в кавычках, разделённых запятой.
+	 *
+	 * @param  string|array<string>|object $strings
+	 * @param  string|false $dbFieldName
+	 * @return string
+	 */
+	public function getStringsString ($strings, $dbFieldName = false): string {
 		if (is_object($strings)) {
-			$return = self::getListFromResource($strings, $dbFieldName);
+			$return = join(',', $this->getListFromResource($strings, $dbFieldName));
 		} elseif (is_array($strings)) {
 			$return = '';
 			foreach ($strings as $s) {
@@ -146,7 +153,13 @@ class DbUtils {
 
 
 
-	protected function getListFromResource (object $r, string $dbFieldName): array {
+	/**
+	 * Достаёт список из БД.
+	 *
+	 * @param  resource|object $r
+	 * @param  string|false    $dbFieldName
+	 */
+	protected function getListFromResource ($r, $dbFieldName): array {
 		if ($dbFieldName === false or $dbFieldName === '') {
 			throw new \InvalidArgumentException("\$dbFieldName не указан");
 		}
@@ -195,20 +208,20 @@ class DbUtils {
 	 * @param  array|int|string $limit
 	 * @return string
 	 */
-	public function getLimitString ($limit) {
+	public function getLimitString ($limit): string {
 		if (is_array($limit)) {
 			$count = count($limit);
 			if ($count == 0) {
 				$limitString = '';
 			} elseif ($count == 1) {
-				$limitString = $limit[0];
+				$limitString = (string)$limit[0];
 			} elseif ($count == 2) {
 				if ($limit[0] and $limit[1]) {
 					$limitString = "$limit[0], $limit[1]";
 				} elseif ($limit[0] and !$limit[1]) {
 					$limitString = "$limit[0], 18446744073709551615";
 				} elseif (!$limit[0] and $limit[1]) {
-					$limitString = $limit[1];
+					$limitString = (string)$limit[1];
 				} else {
 					$limitString = '';
 				}
@@ -216,9 +229,9 @@ class DbUtils {
 				throw new \InvalidArgumentException("\$limit не должен содержать более двух значений");
 			}
 		} elseif (ctype_digit((string)$limit)) {
-			$limitString = $limit;
+			$limitString = (string)$limit;
 		} elseif (preg_match('/^\s*\d+\s*,\s*\d+\s*$/', $limit)) {
-			$limitString = $limit;
+			$limitString = (string)$limit;
 		} else {
 			$limitString = '';
 		}
@@ -298,39 +311,46 @@ class DbUtils {
 
 
 
+	/**
+	 * Возвращает массив с диапазоном [min, max].
+	 */
 	public function getRangeList ($range): array {
 		if (is_string($range) or is_int($range)) {
 			//Это строка?
 			$matches = [];
 			if (ctype_digit("$range")) {
-				$range = [$range, false];
+				$return = [$range, false];
 			}
 			elseif (preg_match('/(\d+)\D+(\d+)/', $range, $matches)) {
-				$range = [$matches[1], $matches[2]];
+				$return = [$matches[1], $matches[2]];
+			}
+			else {
+				$return = [false, false];
 			}
 		} else {
 			if (!is_array($range) or !count($range)) {
 				//Это бред?
-				$range = [false, false];
+				$return = [false, false];
 			} else {
 				//Это массив?
-				$range = array_slice($range, 0, 2);
-				foreach ($range as &$value) {
+				$return = array_slice($range, 0, 2);
+				foreach ($return as &$value) {
 					$value = trim($value);
 					if (!ctype_digit("$value")) {
 						$value = false;
 					}
 				}
 				unset($value);
-				if (count($range) == 1) {
-					$range[] = false;
-				}
+				if (count($return) == 0) $return[0] = false;
+				if (count($return) == 1) $return[1] = false;
 			}
 		}
-		if ($range[0] and $range[1] and $range[0] > $range[1]) {
-			$range = [false, false];
+
+		if ($return[0] and $return[1] and $return[0] > $return[1]) {
+			$return = [false, false];
 		}
-		return $range;
+
+		return $return;
 	}
 
 

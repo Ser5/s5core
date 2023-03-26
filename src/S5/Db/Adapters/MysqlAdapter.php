@@ -2,18 +2,6 @@
 namespace S5\Db\Adapters;
 
 class MysqlAdapter extends AbstractAdapter {
-	/*public function __construct (array $tableNamesPrefix = []) {
-		parent::construct($tableNamesPrefix);
-	}
-
-
-
-	public function withTableNamesPrefix (array $tableNamesPrefix): MysqlAdapter {
-		return new static($tableNamesPrefix);
-	}*/
-
-
-
 	public function escape (string $string): string {
 		return mysql_real_escape_string($string);
 	}

@@ -4,7 +4,8 @@ use S5\Web\AntiSpam\Items\IItem;
 
 
 class AntiSpam {
-	protected bool   $skipRequestUris;
+	/** @var array|false */
+	protected $skipRequestUris;
 	protected bool   $isDebug;
 	protected string $debugEmailTo;
 	protected string $debugEmailFrom;
@@ -45,10 +46,15 @@ class AntiSpam {
 		if ($this->skipRequestUris) {
 			foreach ($this->skipRequestUris as $uri) {
 				if (strpos($_SERVER['REQUEST_URI'], $uri) === 0) {
-					return true;
+					return new CheckResult();
 				}
 			}
 		}
+
+		if (!$this->itemsList) {
+			throw new \InvalidArgumentException("Список \$this->itemsList пуст. Должен содержать хотя бы один объект для проверки форм.");
+		}
+
 		foreach ($this->itemsList as $item) {
 			$result = $item->checkForm();
 			if (!$result->isOk()) {
@@ -67,11 +73,12 @@ class AntiSpam {
 					($result->isOk() ? 'Human' : 'Bot')."\n".
 					$className.
 					$_SERVER['REQUEST_URI']."\n".
-					print_r($_REQUEST,1)
+					print_r($_REQUEST,true)
 				),
 				$mailParams
 			);
 		}
+
 		return $result;
 	}
 }

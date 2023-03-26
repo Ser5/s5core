@@ -1,6 +1,6 @@
 <?
-namespace S5\BatchDb;
-use S5\BatchDb\Adapters\IAdapter;
+namespace S5\Db\BatchDb;
+use S5\Db\Adapters\IAdapter;
 
 /**
  * Основа для пакетного изменения данных.

@@ -6,17 +6,20 @@ class ItemsList extends \S5\ArrayObject {
 
 	/** @param callable|false $filter */
 	public function delete ($filter = false) {
-		if (!$filter) {
-			$filter = fn($i)=>true;
-		}
+		/** @var array<Item> */
 		$list = (array)$this;
+		/** @var array<Item> */
+		$listAfterDeletion = [];
+
 		foreach ($list as $ix => $item) {
-			if ($filter($item)) {
+			if (!$filter or $filter($item)) {
 				$item->delete();
-				unset($list[$ix]);
+			} else {
+				$listAfterDeletion[] = $item;
 			}
 		}
-		$this->exchangeArray(array_values($list));
+
+		$this->exchangeArray($listAfterDeletion);
 	}
 
 

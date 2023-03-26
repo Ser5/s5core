@@ -13,10 +13,10 @@ abstract class Item implements IStringablePath {
 	/**
 	 * Constructor.
 	 *
-	 * @param string $path Путь к сущности
-	 * @param array  $params
+	 * @param string      $path Путь к сущности
+	 * @param array|false $params
 	 */
-	public function __construct ($path, $params = false) {
+	protected function construct ($path, $params = false) {
 		$this->setPath($path);
 		$this->setParams($params);
 	}
@@ -84,26 +84,35 @@ abstract class Item implements IStringablePath {
 
 
 
-	/** Время последнего доступа */
-	public function getAtime (): int {
+	/**
+	 * Время последнего доступа.
+	 * @return int|false
+	 */
+	public function getAtime () {
 		return fileatime($this->path);
 	}
 
-	/** Время последнего изменения свойств */
-	public function getCtime (): int {
+	/**
+	 * Время последнего изменения свойств.
+	 * @return int|false
+	 */
+	public function getCtime () {
 		return filectime($this->path);
 	}
 
-	/** Время последнего изменения содержимого */
-	public function getMtime (): int {
+	/**
+	 * Время последнего изменения содержимого.
+	 * @return int|false
+	 */
+	public function getMtime () {
 		return filemtime($this->path);
 	}
 
 
 
 	public function getMtimeDiff ($file): int {
-		$thisMtimeTs = $this->getMtime();
-		$fileMtimeTs = ($file instanceof Item) ? $file->getMtime() : filemtime($file);
+		$thisMtimeTs = (int)$this->getMtime();
+		$fileMtimeTs = ($file instanceof Item) ? (int)$file->getMtime() : (int)filemtime($file);
 		return ($thisMtimeTs - $fileMtimeTs);
 	}
 
@@ -174,7 +183,7 @@ abstract class Item implements IStringablePath {
 	 */
 	protected function initItem ($path, $params = false) {
 		if (!file_exists($path)) {
-			throw \Exception("Path does not exist: $path");
+			throw new \Exception("Path does not exist: $path");
 		}
 		if (is_dir($path)) {
 			return new Directory($path, $params);
@@ -189,10 +198,6 @@ abstract class Item implements IStringablePath {
 	 * Можно переопределять в наследниках, если нужно инициализировать объекты других классов.
 	 * Файл/директория должны существовать - иначе определять будет не по чему.
 	 * Если это не файл и не папка - возвращает файл, для простоты.
-	 *
-	 * @param  string      $path
-	 * @param  array|false $params
-	 * @return Item
 	 */
 	protected function initPath (string $path): Path {
 		return new Path($path);

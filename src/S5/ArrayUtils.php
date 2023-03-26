@@ -39,10 +39,6 @@ class ArrayUtils {
 	 * Также ловим исключение, если не-массив будет передан в качестве аргумента.
 	 */
 	public static function getAllCombinations (array $arraysList): array {
-		//Проверка, что это список
-		if (!is_array($arraysList)) {
-			throw new \InvalidArgumentException("\$arraysList must be an array of arrays");
-		}
 		//Проверка, что в списке что-нибудь есть
 		$listsAmount = count($arraysList);
 		if ($listsAmount == 0) {
@@ -144,13 +140,14 @@ class ArrayUtils {
 		$parentKeyName  = $params['parent_key_name'];
 		$subtreeKeyName = $params['subtree_key_name'];
 
+		$tree = [];
+
 		if (is_array($source) and !is_callable($reader)) {
 			foreach ($source as $e) {
 				$tree[$e[$idKeyName]] = $e;
 			}
 		}
 		elseif (is_callable($reader)) {
-			$tree = [];
 			while (false !== ($e = $reader($source))) {
 				$tree[$e[$idKeyName]] = $e;
 			}
@@ -317,8 +314,6 @@ class ArrayUtils {
 	 * - list
 	 * - sort_key_name
 	 * - order
-	 *
-	 * @param array $params
 	 */
 	public static function customSort (array $list, string $sortKeyName, array $order): array {
 		if (count($list) == 0) {

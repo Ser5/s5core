@@ -1,5 +1,5 @@
 <?
-namespace S5\BatchDb;
+namespace S5\Db\BatchDb;
 
 /**
  * Пакетное обновление данных.
@@ -23,7 +23,7 @@ class BatchUpdate extends BatchBase {
 		parent::calcLimits();
 		if (!$this->maxBatchLength) {
 			//Достаём значение переменной thread_stack
-			$threadStack          = (int)$this->adapter->getAssoc("show variables like 'thread_stack'")['Value'];
+			$threadStack          = (int)$this->dbAdapter->getAssoc("show variables like 'thread_stack'")['Value'];
 			//Расчитываем максимальное количество UNION по Формуле Серёжи
 			$this->maxBatchLength = (int)floor((($threadStack - 24576 - 1280) / 64) - 1);
 			//Чтоб наверняка - ополовиниваем расчитанное количество
@@ -62,7 +62,7 @@ class BatchUpdate extends BatchBase {
 
 		$fieldValuesString = '';
 		foreach ($data as $k => $v) {
-			$v = $this->adapter->escape($v);
+			$v = $this->dbAdapter->escape($v);
 			if (isset($this->colParams[$k]['is_binary']) and $this->colParams[$k]['is_binary']) {
 				$fieldValuesString .= "BINARY '$v', ";
 			} else {

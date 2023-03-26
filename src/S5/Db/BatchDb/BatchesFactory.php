@@ -1,5 +1,5 @@
 <?
-namespace S5\BatchDb;
+namespace S5\Db\BatchDb;
 
 class BatchesFactory {
 	protected array $params;

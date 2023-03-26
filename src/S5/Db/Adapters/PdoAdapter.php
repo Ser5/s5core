@@ -5,16 +5,9 @@ class PdoAdapter extends AbstractAdapter {
 	protected \PDO $pdo;
 	protected int  $affectedRows = 0;
 
-	public function __construct (\PDO $pdo, array $tableNamesPrefix = []) {
-		//parent::construct($tableNamesPrefix);
+	public function __construct (\PDO $pdo) {
 		$this->pdo = $pdo;
 	}
-
-
-
-	/*public function withTableNamesPrefix (array $tableNamesPrefix): PdoAdapter {
-		return new static($this->pdo, $tableNamesPrefix);
-	}*/
 
 
 
@@ -48,7 +41,7 @@ class PdoAdapter extends AbstractAdapter {
 
 
 	public function getInsertId (): int {
-		return $this->pdo->lastInsertId();
+		return (int)$this->pdo->lastInsertId();
 	}
 
 	public function getAffectedRows (): int {

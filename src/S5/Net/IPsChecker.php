@@ -55,8 +55,13 @@ class IPsChecker {
 	 * ```
 	 * $ipc->check(192, 168, 0, 1);
 	 * ```
+	 *
+	 * @param int|string $ip1
+	 * @param int|string $ip2
+	 * @param int|string $ip3
+	 * @param int|string $ip4
 	 */
-	public function check (int $ip1, int $ip2, int $ip3, int $ip4) {
+	public function check ($ip1, $ip2, $ip3, $ip4): bool {
 		$fourTestParts = array($ip1, $ip2, $ip3, $ip4);
 		for ($ipx = 0; $ipx < count($this->allowedIPs); $ipx++) {
 			//Сравниваем переданный адрес с одной из масок.

@@ -20,12 +20,17 @@ class TasksManager {
 
 	protected IAdapter $dbAdapter;
 	protected DbUtils  $dbUtils;
+	protected int      $progressUpdateDelay;
 	protected int      $oldTasksKeepPeriod;
 	protected File     $lockFile;
 	protected mixed    $runTimeGetter;
 
-	protected \Respect\Validation\Validator $createValidator;
-	protected \Respect\Validation\Validator $editValidator;
+	protected \Respect\Validation\Validatable $createValidator;
+	protected \Respect\Validation\Validatable $editValidator;
+	protected \Respect\Validation\Validatable $listValidator;
+	protected \Respect\Validation\Validatable $getLogsListValidator;
+	protected \Respect\Validation\Validatable $createTypeValidator;
+	protected \Respect\Validation\Validatable $editTypeValidator;
 
 	protected string $callbackTypes = 'callback_types';
 	protected string $taskTypes     = 'task_types';
@@ -148,13 +153,10 @@ class TasksManager {
 	 *    progress: int,
 	 *    params:   string,
 	 * } $data
-	 * @return int
 	 */
 	public function edit (int $taskId, array $data) {
 		$this->assert($data, $this->editValidator);
-		if ($data) {
-			$this->dbAdapter->query($this->dbUtils->getUpdate($this->tasksQueue, 'id', $taskId, $data));
-		}
+		$this->dbAdapter->query($this->dbUtils->getUpdate($this->tasksQueue, 'id', "$taskId", $data));
 	}
 
 
@@ -169,10 +171,10 @@ class TasksManager {
 	 * Получение списка заданий.
 	 *
 	 * @param array{
-	 *    ids:       false|int|array<int>|string,
-	 *    type_ids:  false|int|array<int>|string,
-	 *    state_ids: false|int|array<int>|string,
-	 * } $data
+	 *    ids?:       false|int|array<int>|string,
+	 *    type_ids?:  false|int|array<int>|string,
+	 *    state_ids?: false|int|array<int>|string,
+	 * } $params
 	 * @return array
 	 */
 	public function getList (array $params = []): array {
@@ -207,10 +209,10 @@ class TasksManager {
 	 * Удаление списка заданий.
 	 *
 	 * @param array{
-	 *    ids:       false|int|array<int>|string,
-	 *    type_ids:  false|int|array<int>|string,
-	 *    state_ids: false|int|array<int>|string,
-	 * } $data
+	 *    ids?:       false|int|array<int>|string,
+	 *    type_ids?:  false|int|array<int>|string,
+	 *    state_ids?: false|int|array<int>|string,
+	 * } $params
 	 * @return int
 	 */
 	public function deleteList (array $params = []): int {
@@ -266,9 +268,9 @@ class TasksManager {
 	 * Добыча списка логов.
 	 *
 	 * @param array{
-	 *    ids:      false|int|string|array,
-	 *    task_ids: false|int|string|array,
-	 *    limit:    false|int|string|array,
+	 *    ids?:      false|int|string|array,
+	 *    task_ids?: false|int|string|array,
+	 *    limit?:    false|int|string|array,
 	 * } $params
 	 */
 	public function getLogTextsList (array $params = []): array {
@@ -313,7 +315,7 @@ class TasksManager {
 	 * Запуск задач - если очередь свободна и есть задачи для запуска.
 	 *
 	 * @param array{
-	 *    callbacks_hash: array|false,
+	 *    callbacks_hash?: array|false,
 	 * } $params
 	 * @return array ID обработанных задач
 	 */
@@ -376,7 +378,7 @@ class TasksManager {
 		$lastUpdateTs   = $timeGetter();
 		$logStringsList = [];
 
-		$taskUpdater = function ($progress, string $addLogString, ?bool $isDone = null) use ($dbAdapter, $timeGetter, $task, &$lastUpdateTs, &$logStringsList) {
+		$taskUpdater = function ($progress, string $addLogString, ?bool $isDone = null) use ($timeGetter, $task, &$lastUpdateTs, &$logStringsList) {
 			$nowTs            = $timeGetter();
 			$progress         = (int)round($progress);
 			$logStringsList[] = $addLogString;
@@ -406,6 +408,8 @@ class TasksManager {
 				}
 				$callback = [$callbacksHash[$task->_callback_source], $task->_callback_method];
 			break;
+			default:
+				throw new \InvalidArgumentException("Неизвестный тип функции обратного вызова, выполняющей обработку задачи: [$task->_callback_type_id]");
 		}
 
 		$taskParamsList = $task->params ? [unserialize($task->params)] : [];
@@ -436,7 +440,7 @@ class TasksManager {
 	 */
 	protected function deleteOldList (): int {
 		$deleteTs = date('Y-m-d H:i:s', time() - $this->oldTasksKeepPeriod);
-		$query    = "DELETE FROM $tasksQueue WHERE state_id IN (".static::ERROR.','.static::DONE.") AND created_at <= '$deleteTs'";
+		$query    = "DELETE FROM $this->tasksQueue WHERE state_id IN (".static::ERROR.','.static::DONE.") AND created_at <= '$deleteTs'";
 		$this->dbAdapter->query($query);
 		return $this->dbAdapter->getAffectedRows();
 	}
@@ -477,20 +481,21 @@ class TasksManager {
 	 *    callback_method:  string,
 	 *    sort:             int,
 	 * } $data
-	 * @return int
 	 */
-	public function editType (array $data): int {
+	public function editType (int $typeId, array $data) {
 		$this->assert($data, $this->editTypeValidator);
-		$this->dbAdapter->query($this->dbUtils->getUpdate($data));
+		$this->dbAdapter->query($this->dbUtils->getUpdate($this->taskTypes, 'id', "$typeId", $data));
 	}
 
 
 
-	protected function assert (mixed $data, \Respect\Validation\Validator $validator) {
+	protected function assert (mixed $data, \Respect\Validation\Validatable $validator) {
 		try {
 			$validator->assert($data);
-		} catch (\Respect\Validation\Exceptions\Exception $e) {
+		} catch (\Respect\Validation\Exceptions\NestedValidationException $e) {
 			throw new \InvalidArgumentException(join("\n", $e->getMessages()));
+		} catch (\Exception $e) {
+			throw new $e;
 		}
 	}
 

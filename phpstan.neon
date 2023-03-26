@@ -1,0 +1,11 @@
+parameters:
+	level: 5
+	paths:
+		- src
+	excludePaths:
+		- *Bitrix*
+		- *MysqlAdapter*
+		- *OldFilesDeleter*
+		- *FilesUploader*
+		- *ReCaptcha*
+		- *FilesUtils*

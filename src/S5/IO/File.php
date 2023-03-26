@@ -1,9 +1,12 @@
 <?
 namespace S5\IO;
 
+/**
+ * @phpstan-consistent-constructor
+ */
 class File extends Item {
-	/** @var resource */
-	private $_handle   = false;
+	/** @var resource|false */
+	private $_handle = false;
 
 	/** @var bool */
 	private $_isLocked = false;
@@ -28,7 +31,7 @@ class File extends Item {
 		} else {
 			$path = $file;
 		}
-		parent::__construct($path, $params);
+		parent::construct($path, $params);
 	}
 
 
@@ -94,7 +97,7 @@ class File extends Item {
 	 * Далее это добро можно считать через простой `$data = require $filePath`;
 	 */
 	public function putPhpReturn ($data) {
-		$this->putContents("<?\nreturn ".var_export($data,1).";\n");
+		$this->putContents("<?\nreturn ".var_export($data,true).";\n");
 	}
 
 
@@ -178,7 +181,9 @@ class File extends Item {
 
 
 	protected function renameOrCopy ($name, $mode) {
-		$r = true;
+		$r       = true;
+		$newPath = '';
+
 		if ($this->isExists()) {
 			$functionName = ($mode == 'rename') ? 'rename' : 'copy';
 			$type         = (new Path($name))->getComplexityType();
@@ -224,7 +229,7 @@ class File extends Item {
 			throw new \Exception("Не удалось $actionMessage \"$this\" в \"$name\"");
 		}
 
-		if ($mode == 'rename') {
+		if ($mode == 'rename' and $newPath) {
 			$this->setPath($newPath);
 		}
 	}

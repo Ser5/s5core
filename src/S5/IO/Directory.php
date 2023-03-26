@@ -1,7 +1,22 @@
 <?
 namespace S5\IO;
 
+/**
+ * @phpstan-consistent-constructor
+ */
 class Directory extends Item {
+	/**
+	 * Constructor.
+	 *
+	 * @param string      $path Путь к директории
+	 * @param array|false $params
+	 */
+	public function __construct ($path, $params = false) {
+		parent::construct($path, $params);
+	}
+
+
+
 	/**
 	 * @param string $path
 	 */
@@ -78,9 +93,7 @@ class Directory extends Item {
 		$name = new Path($name);
 
 		if ($name->isComplex()) {
-			if ($name != $currentPath) {
-				$newPath = $name;
-			}
+			$newPath = ($name == $currentPath ? $currentPath : $name);
 		} else {
 			$parentDir = new Directory(dirname($currentPath));
 			if (!$parentDir->isExists()) {
@@ -168,10 +181,10 @@ class Directory extends Item {
 				if     (is_dir($path))  $foundType = 'd';
 				elseif (is_file($path)) $foundType = 'f';
 				else                    $foundType = false;
-				if ($type = 'd' and $foundType = 'd') {
+				if ($type == 'd' and $foundType == 'd') {
 					$firstItem = new Directory($path);
 					break;
-				} elseif ($type = 'f' and $foundType = 'f') {
+				} elseif ($type == 'f' and $foundType == 'f') {
 					$firstItem = new File($path);
 					break;
 				} elseif ($type == false) {
@@ -189,30 +202,30 @@ class Directory extends Item {
 
 
 
-	public function deleteOldFilesList (string $olderThen) {
-		preg_match('/^(\d+)([smhdw])?$/', $olderThen, $matches);
+	public function deleteOldFilesList (string $olderThan) {
+		preg_match('/^(\d+)([smhdw])?$/', $olderThan, $matches);
 
-		$t = $matches[1];
-		if (!ctype_digit((string)$t)) {
-			throw new \InvalidArgumentException("Invalid numerid part: [$t]");
+		if (!ctype_digit((string)$matches[1])) {
+			throw new \InvalidArgumentException("Invalid numerid part: [$matches[1]]");
 		}
+		$t = (int)$matches[1];
 
 		if (!isset($matches[2])) {
-			$olderThen = $t;
+			$olderThan = $t;
 		} else {
 			switch ($matches[2]) {
-				case 's': $olderThen = $t;          break;
-				case 'm': $olderThen = $t * 60;     break;
-				case 'h': $olderThen = $t * 3600;   break;
-				case 'd': $olderThen = $t * 86400;  break;
-				case 'w': $olderThen = $t * 604800; break;
+				case 's': $olderThan = $t;          break;
+				case 'm': $olderThan = $t * 60;     break;
+				case 'h': $olderThan = $t * 3600;   break;
+				case 'd': $olderThan = $t * 86400;  break;
+				case 'w': $olderThan = $t * 604800; break;
 				default: throw new \InvalidArgumentException("Unknown modifier [$matches[1]]");
 			}
 		}
 
 		$dh = $this->_open();
 
-		$deleteTime = time() - $olderThen;
+		$deleteTime = time() - $olderThan;
 		while ($fileName = readdir($dh)) {
 			if ($fileName == '.' or $fileName == '..') {
 				continue;
