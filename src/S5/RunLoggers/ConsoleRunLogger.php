@@ -1,5 +1,5 @@
 <?
-namespace S5\RunLogger;
+namespace S5\RunLoggers;
 
 class ConsoleRunLogger extends BaseRunLogger {
 	private static $ok      = "\033[0;32m";
