@@ -84,23 +84,26 @@ abstract class Item implements IStringablePath {
 
 
 
-	public function getAtime (): \DateTime {
-		return new \DateTime('@'.fileatime($this->path));
+	/** Время последнего доступа */
+	public function getAtime (): int {
+		return fileatime($this->path);
 	}
 
-	public function getCtime (): \DateTime {
-		return new \DateTime('@'.filectime($this->path));
+	/** Время последнего изменения свойств */
+	public function getCtime (): int {
+		return filectime($this->path);
 	}
 
-	public function getMtime (): \DateTime {
-		return new \DateTime('@'.filemtime($this->path));
+	/** Время последнего изменения содержимого */
+	public function getMtime (): int {
+		return filemtime($this->path);
 	}
 
 
 
 	public function getMtimeDiff ($file): int {
-		$thisMtimeTs = $this->getMtime()->getTimestamp();
-		$fileMtimeTs = ($file instanceof Item) ? $file->getMtime()->getTimestamp() : filemtime($file);
+		$thisMtimeTs = $this->getMtime();
+		$fileMtimeTs = ($file instanceof Item) ? $file->getMtime() : filemtime($file);
 		return ($thisMtimeTs - $fileMtimeTs);
 	}
 
