@@ -1,0 +1,1 @@
+cd .. && vendor/bin/phpstan
