@@ -9,20 +9,37 @@ class Api {
 			'value' => false,
 			'flag'  => false,
 		];
-
-		$outputString = "run result ";
+		$output = '';
 		if ($p['value']) {
 			if (!is_array($p['value'])) {
 				$p['value'] = [$p['value']];
 			}
-			$outputString .= join(' ', $p['value']) . ' ';
+			$output = join(' ', $p['value']);
 		}
-		if ($p['flag']) {
-			$outputString .= 'yes ';
+		elseif ($p['flag']) {
+			$output = 'yes';
 		}
-		$outputString .= "\n";
+		$this->_showOutput($output);
+	}
 
-		echo $outputString;
+	public function boolNoDefault ($p) {
+		$output = '';
+		if (isset($p['value'])) {
+			$output = ($p['value'] ? 'yes' : 'no');
+		}
+		$this->_showOutput($output);
+	}
+
+	public function boolWithDefault ($p) {
+		$output = '';
+		if (isset($p['value'])) {
+			$output = ($p['value'] ? 'yes' : 'no');
+		}
+		$this->_showOutput($output);
+	}
+
+	private function _showOutput ($tail) {
+		echo "run result $tail\n";
 	}
 }
 
@@ -40,6 +57,22 @@ $commandsDataList = [
 		'options' => [
 			['label' => 'Value description', 'code' => 'value', 'flags' => ['is_array','required']],
 			['label' => 'Flag description',  'code' => 'flag',  'flags' => 'none'],
+		],
+	],
+	[
+		'name'        => 'test:bool:no-default',
+		'description' => 'Description',
+		'callback'    => [$api, 'boolNoDefault'],
+		'options' => [
+			['label' => 'Bool no default', 'code' => 'value', 'flags' => 'bool'],
+		],
+	],
+	[
+		'name'        => 'test:bool:with-default',
+		'description' => 'Description',
+		'callback'    => [$api, 'boolWithDefault'],
+		'options' => [
+			['label' => 'Bool with default', 'code' => 'value', 'flags' => 'bool', 'default' => false],
 		],
 	],
 ];
