@@ -3,7 +3,7 @@ namespace S5\RunLoggers;
 
 
 
-class RunLoggersTest extends \PHPUnit\Framework\TestCase {
+class RunLoggersTest extends \S5\TestCase {
 	public function testEmpty () {
 		$rl = new EmptyRunLogger();
 		$this->assertEquals('', $rl->get('test', 'ok', 2));
