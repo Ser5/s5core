@@ -25,4 +25,4 @@ $DIC['tasksViewer'] = new \S5\TasksManager\Viewer\TasksViewer(
 
 
 
-$dbFile = new \S5\IO\File(__DIR__.'/db.json');
+$dbFile = new \S5\IO\File(__DIR__.'/db.php');

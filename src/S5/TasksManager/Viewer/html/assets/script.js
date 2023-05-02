@@ -31,11 +31,15 @@ S5.TasksViewer = class {
 				this.interval = setInterval(() => this.update(), 1000);
 			},
 			update: function () {
-				fetch('/ajax.php')
+				fetch('/ajax.php?' + new URLSearchParams({
+					limit: 3,
+					page:  2,
+				}))
 					.then(r => r.json())
 					.then(data => {
-						//console.log(data[0].progress);
-						this.tasksList = data;
+						console.log(data.pagesList[0].isGap);
+						this.pagesList = data.pagesList;
+						this.tasksList = data.tasksList;
 						/*if (data.progress == 100) {
 							clearInterval(this.interval);
 						}*/

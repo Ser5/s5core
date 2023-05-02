@@ -2,13 +2,16 @@
 
 <div class="tasks" x-data="state" x-cloak>
 	<div class="tasks__pager">
-		<div class="tasks__pager-item tasks__pager-first"></div>
-		<div class="tasks__pager-item tasks__pager-prev"></div>
 		<div class="tasks__pager-numbers">
-			<div class="tasks__pager-item tasks__pager-number tasks__pager-active"></div>
+			<template x-for="page in pagesList">
+				<template x-if="page.isGap">
+					<div class="tasks__pager-item tasks__pager-number tasks__pager-gap">&hellip;</div>
+				</template>
+				<template x-if="!page.isGap">
+					<a :href="page.url" class="tasks__pager-item tasks__pager-number" x-text="page.number"></a>
+				</template>
+			</template>
 		</div>
-		<div class="tasks__pager-item tasks__pager-next"></div>
-		<div class="tasks__pager-item tasks__pager-last"></div>
 	</div>
 	<table class="tasks__list">
 		<tr>

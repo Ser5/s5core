@@ -47,7 +47,17 @@ class Progress {
 	protected int      $startTime;
 
 
-	public function __construct (array $params) {
+	/**
+	 * Ctor.
+	 *
+	 * @param array{
+	 *    timeGetter?:  mixed,
+	 *    unitsAmount?: int,
+	 *    progress?:    int,
+	 *    startTime?:   int|string,
+	 * } $params
+	 */
+	public function __construct (array $params = []) {
 		$this->timeGetter  = $params['timeGetter']  ?? fn()=>time();
 		$this->unitsAmount = $params['unitsAmount'] ?? 100;
 		$this->progress    = $params['progress']    ?? 0;
@@ -115,19 +125,35 @@ class Progress {
 		return ($this->timeGetter)() - $this->startTime;
 	}
 
-	public function getLeftTime (): int {
-		$elapsedFraction = $this->progress / $this->unitsAmount;
-		$leftFraction    = 1 - $elapsedFraction;
-		$ratio           = $leftFraction / $elapsedFraction;
-		$leftTime        = (($this->timeGetter)() - $this->startTime) * $ratio;
-		return (int)round($leftTime, 0, PHP_ROUND_HALF_DOWN);
+	/**
+	 * Сколько секунд осталось до завершения.
+	 *
+	 * Если прогресс равен нулю - возвращает false.
+	 *
+	 * @return int|false
+	 */
+	public function getLeftTime () {
+		if (!$this->progress) {
+			return false;
+		} else {
+			$elapsedFraction = $this->progress / $this->unitsAmount;
+			$leftFraction    = 1 - $elapsedFraction;
+			$ratio           = $leftFraction / $elapsedFraction;
+			$leftTime        = (($this->timeGetter)() - $this->startTime) * $ratio;
+			return (int)round($leftTime, 0, PHP_ROUND_HALF_DOWN);
+		}
 	}
 
 	/**
 	 * Возвращает данные по оставшемуся времени: всего секунд, часы, минуты, секунды, строку со вмененем вида "12:34:56".
+	 *
+	 * Если прогресс равен нулю - возвращает false.
+	 *
+	 * @return ProgressTimeData|false
 	 */
-	public function getLeftTimeData (): ProgressTimeData {
-		return new ProgressTimeData($this->getLeftTime());
+	public function getLeftTimeData () {
+		$leftTimeData = $this->getLeftTime();
+		return ($leftTimeData !== false ? new ProgressTimeData($leftTimeData) : false);
 	}
 
 	public function getTotalTime (): int {
