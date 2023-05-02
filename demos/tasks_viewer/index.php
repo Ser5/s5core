@@ -17,7 +17,7 @@ foreach ($tasksList as $task) {
 }
 
 $viewerAssetsDirPath = __DIR__.'/../../src/S5/TasksManager/Viewer/html/assets/';
-foreach (['alpine.min.js', 'script.js', 'styles.css'] as $fileName) {
+foreach (['vue.global.js', 'script.js', 'styles.css'] as $fileName) {
 	copy("$viewerAssetsDirPath/$fileName", __DIR__."/assets/$fileName");
 }
 
@@ -29,7 +29,7 @@ foreach (['alpine.min.js', 'script.js', 'styles.css'] as $fileName) {
 	<meta charset="UTF-8">
 	<meta name="viewport" content="width=device-width, initial-scale=1.0">
 	<title>Просмотр задач</title>
-	<script defer src="/assets/alpine.min.js"></script>
+	<script src="/assets/vue.global.js"></script>
 	<link rel="stylesheet" href="/assets/main.css">
 	<link rel="stylesheet" href="/assets/styles.css">
 </head>

@@ -83,7 +83,7 @@ $dbData = initDb();
 
 
 $progress = new \S5\Progress();
-$progStep = 5;
+$progStep = 1;
 for ($progValue = $progStep; $progValue <= 100; $progValue += $progStep) {
 	echo "$progValue\n";
 
