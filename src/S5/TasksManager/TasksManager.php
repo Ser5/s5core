@@ -4,6 +4,7 @@ use S5\Db\Adapters\IAdapter;
 use S5\Db\DbUtils;
 use S5\IO\File;
 use Respect\Validation\Validator as v;
+use Respect\Validation\Validatable;
 
 
 
@@ -25,12 +26,13 @@ class TasksManager {
 	protected File     $lockFile;
 	protected mixed    $runTimeGetter;
 
-	protected \Respect\Validation\Validatable $createValidator;
-	protected \Respect\Validation\Validatable $editValidator;
-	protected \Respect\Validation\Validatable $listValidator;
-	protected \Respect\Validation\Validatable $getLogsListValidator;
-	protected \Respect\Validation\Validatable $createTypeValidator;
-	protected \Respect\Validation\Validatable $editTypeValidator;
+	protected Validatable $createValidator;
+	protected Validatable $editValidator;
+	protected Validatable $listValidator;
+	protected Validatable $countValidator;
+	protected Validatable $getLogsListValidator;
+	protected Validatable $createTypeValidator;
+	protected Validatable $editTypeValidator;
 
 	protected string $callbackTypes = 'callback_types';
 	protected string $taskTypes     = 'task_types';
@@ -78,54 +80,61 @@ class TasksManager {
 
 
 	protected function initValidators () {
-		$min0     = v::intVal()->min(0);
-		$min1     = v::intVal()->min(1);
-		$string   = v::stringVal();
-		$string1  = v::stringVal()->length(1);
-		$ids      = v::anyOf(v::falseVal(), $min1, v::each($min1), $string);
-		$progress = v::intVal()->min(0)->max(100);
+		$min0     = fn() => v::intVal()->min(0);
+		$min1     = fn() => v::intVal()->min(1);
+		$string   = fn() => v::stringVal();
+		$string1  = fn() => v::stringVal()->length(1);
+		$ids      = fn() => v::anyOf(v::falseVal(), $min1(), v::each($min1()), $string());
+		$progress = fn() => v::intVal()->min(0)->max(100);
 
 		$this->createValidator = (new v())
-			->key('type_id',  $min1)
-			->key('state_id', $min1,     false)
-			->key('progress', $progress, false)
-			->key('params',   $string,   false)
+			->key('type_id',  $min1())
+			->key('state_id', $min1(),     false)
+			->key('progress', $progress(), false)
+			->key('params',   $string(),   false)
 		;
 
 		$this->editValidator = (new v())
-			->key('type_id',  $min1,     false)
-			->key('state_id', $min1,     false)
-			->key('progress', $progress, false)
-			->key('params',   $string,   false)
+			->key('type_id',  $min1(),     false)
+			->key('state_id', $min1(),     false)
+			->key('progress', $progress(), false)
+			->key('params',   $string(),   false)
 		;
 
 		$this->listValidator = (new v())
-			->key('ids',       $ids, false)
-			->key('type_ids',  $ids, false)
-			->key('state_ids', $ids, false)
+			->key('ids',       $ids(),    false)
+			->key('type_ids',  $ids(),    false)
+			->key('state_ids', $ids(),    false)
+			->key('order_by',  $string(), false)
+			->key('limit',     v::anyOf(v::stringVal(), v::arrayVal()), false)
+		;
+
+		$this->countValidator = (new v())
+			->key('type_ids',  $ids(), false)
+			->key('state_ids', $ids(), false)
 		;
 
 		$this->getLogsListValidator = (new v())
-			->key('ids',      $ids, false)
-			->key('type_ids', $ids, false)
+			->key('ids',      $ids(), false)
+			->key('type_ids', $ids(), false)
 			->key('limit',    v::anyOf(v::falseVal(), v::intVal(), v::stringVal()), false)
 		;
 
 		$this->createTypeValidator = (new v())
-			->key('code',             $string1)
-			->key('name',             $string, false)
-			->key('description',      $string, false)
-			->key('callback_type_id', $min1)
-			->key('callback_source',  v::anyOf(v::falseVal(), $string1), false)
-			->key('callback_method',  $string1)
-			->key('sort',             $min0, false)
+			->key('code',             $string1())
+			->key('name',             $string(), false)
+			->key('description',      $string(), false)
+			->key('callback_type_id', $min1())
+			->key('callback_source',  v::anyOf(v::falseVal(), $string1()), false)
+			->key('callback_method',  $string1())
+			->key('sort',             $min0(), false)
 		;
 
 		$this->editTypeValidator = (new v())
-			->key('code',        $string1, false)
-			->key('name',        $string,  false)
-			->key('description', $string,  false)
-			->key('sort',        $min0,    false)
+			->key('code',        $string1(), false)
+			->key('name',        $string(),  false)
+			->key('description', $string(),  false)
+			->key('sort',        $min0(),    false)
 		;
 	}
 
@@ -145,15 +154,20 @@ class TasksManager {
 	 * Добавление задания в очередь.
 	 *
 	 * @param array{
-	 *    type_id:  int,
-	 *    state_id: int,
-	 *    progress: int,
-	 *    params:   string,
+	 *    type_id:   int,
+	 *    state_id?: int,
+	 *    progress?: int,
+	 *    params?:   string,
 	 * } $data
 	 * @return int
 	 */
 	public function create (array $data): int {
 		$this->assert($data, $this->createValidator);
+		$data += [
+			'state_id' => static::NEW,
+			'progress' => 0,
+			'params'   => '',
+		];
 		$this->dbAdapter->query($this->dbUtils->getInsert($this->tasksQueue, $data));
 		return $this->dbAdapter->getInsertId();
 	}
@@ -164,15 +178,17 @@ class TasksManager {
 	 * Редактирование задания.
 	 *
 	 * @param array{
-	 *    type_id:  int,
-	 *    state_id: int,
-	 *    progress: int,
-	 *    params:   string,
+	 *    type_id?:  int,
+	 *    state_id?: int,
+	 *    progress?: int,
+	 *    params?:   string,
 	 * } $data
 	 */
 	public function edit (int $taskId, array $data) {
-		$this->assert($data, $this->editValidator);
-		$this->dbAdapter->query($this->dbUtils->getUpdate($this->tasksQueue, 'id', "$taskId", $data));
+		if ($data) {
+			$this->assert($data, $this->editValidator);
+			$this->dbAdapter->query($this->dbUtils->getUpdate($this->tasksQueue, 'id', "$taskId", $data));
+		}
 	}
 
 
@@ -193,7 +209,6 @@ class TasksManager {
 	 *    order_by?:  false|string,
 	 *    limit?:     false|int|array<int>|string,
 	 * } $params
-	 * @return array
 	 */
 	public function getList (array $params = []): array {
 		$whereString = $this->getListWhereString($params, true);
@@ -227,7 +242,7 @@ class TasksManager {
 		]);
 		$logsHash = [];
 		foreach ($logsList as $e) {
-			$logsHash[$e->task_id][] = $e->text;
+			$logsHash[$e->task_id][] = $e;
 		}
 
 		//Обрабатываем данные и цепляем дополнительные данные
@@ -244,6 +259,32 @@ class TasksManager {
 		}
 
 		return $list;
+	}
+
+
+
+	/**
+	 * Подсчёт заданий.
+	 *
+	 * @param array{
+	 *    type_ids?:  false|int|array<int>|string,
+	 *    state_ids?: false|int|array<int>|string,
+	 * } $params
+	 */
+	public function count (array $params = []): int {
+		$this->assert($params, $this->countValidator);
+
+		$whereString = $this->getListWhereString($params, true);
+
+		$query =
+			"SELECT COUNT(*) AS count
+			FROM       $this->tasksQueue q
+			INNER JOIN $this->taskTypes  t ON t.id = q.type_id
+			INNER JOIN $this->taskStates s ON s.id = q.state_id
+			WHERE $whereString 1
+			";
+
+		return intval($this->dbAdapter->getObject($query)->count);
 	}
 
 
@@ -270,12 +311,12 @@ class TasksManager {
 
 
 	protected function getListWhereString (array $params, bool $isUseAlias): string {
+		$this->assert($params, $this->listValidator);
 		$p = $params + [
 			'ids'       => false,
 			'type_ids'  => false,
 			'state_ids' => false,
 		];
-		$this->assert($p, $this->listValidator);
 
 		$whereString = '';
 		$t = ($isUseAlias ? 'q.' : '');
@@ -418,7 +459,8 @@ class TasksManager {
 		$timeGetter = $this->runTimeGetter;
 
 		//Берём новую задачу в работу - ставим ей статус "Выполняется"
-		$query = "UPDATE $tasksQueue SET state_id = ".static::RUNNING.", progress = 0 WHERE id = $task->id";
+		$nowString = date('Y-m-d H:i:s', $timeGetter());
+		$query     = "UPDATE $tasksQueue SET state_id = ".static::RUNNING.", progress = 0, started_at = '$nowString' WHERE id = $task->id";
 		$dbAdapter->query($query);
 
 		$lastUpdateTs   = $timeGetter();
@@ -426,7 +468,7 @@ class TasksManager {
 
 		$taskUpdater = function ($progress, string $addLogString, ?bool $isDone = null) use ($timeGetter, $task, &$lastUpdateTs, &$logStringsList) {
 			$nowTs            = $timeGetter();
-			$progress         = (int)round($progress);
+			$progress         = min(100, (int)round($progress));
 			$logStringsList[] = $addLogString;
 			if (is_null($isDone)) {
 				$isDone = ($progress == 100);
@@ -473,7 +515,10 @@ class TasksManager {
 	protected function setProgressAndDoneState (int $taskId, int $progress, bool $isDone) {
 		$setString = "progress = $progress";
 		if ($isDone) {
-			$setString .= ", state_id = ".static::DONE;
+			$setString .=
+				", state_id    = ".static::DONE.
+				", finished_at = '".date('Y-m-d H:i:s', ($this->runTimeGetter)())."'"
+			;
 		}
 		$query = "UPDATE $this->tasksQueue SET $setString WHERE id = $taskId";
 		$this->dbAdapter->query($query);
@@ -498,14 +543,13 @@ class TasksManager {
 	 *
 	 * @param array{
 	 *    code:             string,
-	 *    name:             string,
-	 *    description:      string,
+	 *    name?:            string,
+	 *    description?:     string,
 	 *    callback_type_id: int,
-	 *    callback_source:  string|false,
+	 *    callback_source?: string|false,
 	 *    callback_method:  string,
-	 *    sort:             int,
+	 *    sort?:            int,
 	 * } $data
-	 * @return int
 	 */
 	public function createType (array $data): int {
 		$this->assert($data, $this->createTypeValidator);
@@ -516,16 +560,16 @@ class TasksManager {
 
 
 	/**
-	 * Добавление типа задания.
+	 * Редактирование типа задания.
 	 *
 	 * @param array{
 	 *    code:             string,
-	 *    name:             string,
-	 *    description:      string,
+	 *    name?:            string,
+	 *    description?:     string,
 	 *    callback_type_id: int,
-	 *    callback_source:  string|false,
+	 *    callback_source?: string|false,
 	 *    callback_method:  string,
-	 *    sort:             int,
+	 *    sort?:            int,
 	 * } $data
 	 */
 	public function editType (int $typeId, array $data) {
@@ -535,7 +579,7 @@ class TasksManager {
 
 
 
-	protected function assert (mixed $data, \Respect\Validation\Validatable $validator) {
+	protected function assert (mixed $data, Validatable $validator) {
 		try {
 			$validator->assert($data);
 		} catch (\Respect\Validation\Exceptions\NestedValidationException $e) {
