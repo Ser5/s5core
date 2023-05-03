@@ -118,14 +118,14 @@ class Pager {
 	 * Ctor.
 	 *
 	 * @param array{
-	 *    items_amount:   ?int,
-	 *    items_per_page: ?int,
-	 *    template:       ?string,
-	 *    linker:         ?mixed,
-	 *    page_number:    ?int,
+	 *    items_amount?:   int,
+	 *    items_per_page?: int,
+	 *    template?:       string,
+	 *    linker?:         mixed,
+	 *    page_number?:    int,
 	 * } $params
 	 */
-	function __construct ($params = []) {
+	function __construct (array $params = []) {
 		$params = static::checkItemsAmount($params);
 		$params = static::checkItemsPerPage($params);
 		$params = static::checkTemplate($params);
@@ -140,11 +140,11 @@ class Pager {
 	 * Расчёт данных постраничности с произвольными параметрами.
 	 *
 	 * @param array{
-	 *    items_amount:   ?int,
-	 *    items_per_page: ?int,
-	 *    template:       ?string,
-	 *    linker:         ?mixed,
-	 *    page_number:    ?int,
+	 *    items_amount?:   int,
+	 *    items_per_page?: int,
+	 *    template?:       string,
+	 *    linker?:         mixed,
+	 *    page_number?:    int,
 	 * } $params
 	 */
 	public function get (array $params = []): PagerResult {
@@ -217,21 +217,21 @@ class Pager {
 					if (count($matches) < 2) {
 						$rangesList[] = [$pagesAmount, $pagesAmount];
 					} else {
-						$rangesList[] = [$pagesAmount-$matches[1]+1, $pagesAmount];
+						$rangesList[] = [$pagesAmount-(int)$matches[1]+1, $pagesAmount];
 					}
 				} elseif (preg_match('/^(\d*)\*(\d*)$/', $rangeString, $matches)) {
 					//Основное окно
 					$range            = [];
 					$pagesWindowWidth = 1;
 					if ($matches[1]) {
-						$range[]           = $pageNumber-$matches[1];
-						$pagesWindowWidth += $matches[1];
+						$range[]           = $pageNumber - (int)$matches[1];
+						$pagesWindowWidth += (int)$matches[1];
 					} else {
 						$range[] = $pageNumber;
 					}
 					if ($matches[2]) {
-						$range[]           = $pageNumber+$matches[2];
-						$pagesWindowWidth += $matches[2];
+						$range[]           = $pageNumber + (int)$matches[2];
+						$pagesWindowWidth += (int)$matches[2];
 					} else {
 						$range[] = $pageNumber;
 					}
@@ -306,10 +306,8 @@ class Pager {
 
 		$pagerResult = new PagerResult(
 			$itemsAmount,
-			$itemsPerPage,
 			$originalPageNumber,
 			$pageNumber,
-			$linker,
 			$itemsFrom, $itemsTo,
 			$pagesAmount, $pagesWindowWidth,
 			$firstPage, $rewPage, $prevPage, $sequence, $nextPage, $ffPage, $lastPage

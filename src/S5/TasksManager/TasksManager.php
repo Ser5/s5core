@@ -190,8 +190,8 @@ class TasksManager {
 	 *    ids?:       false|int|array<int>|string,
 	 *    type_ids?:  false|int|array<int>|string,
 	 *    state_ids?: false|int|array<int>|string,
-	 *    order_by:   false|string,
-	 *    limit:      false|int|array<int>|string,
+	 *    order_by?:  false|string,
+	 *    limit?:     false|int|array<int>|string,
 	 * } $params
 	 * @return array
 	 */
@@ -203,7 +203,7 @@ class TasksManager {
 			'limit'    => false,
 		];
 
-		$limitString = !$p['limit'] ? '' : 'LIMIT ' . $dbUtils->getLimitString($p['limit']);
+		$limitString = !$p['limit'] ? '' : 'LIMIT ' . $this->dbUtils->getLimitString($p['limit']);
 
 		//Основные данные
 		$query =

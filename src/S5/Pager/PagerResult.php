@@ -25,10 +25,8 @@ class PagerResult {
 
 	public function __construct (
 		int $itemsAmount,
-		int $itemsPerPage,
 		$originalPageNumber,
 		int $pageNumber,
-		$linker,
 		int $itemsFrom, int $itemsTo,
 		int $pagesAmount, int $pagesWindowWidth,
 		Page $first, Page $rew, Page $prev, array $sequence, Page $next, Page $ff, Page $last
