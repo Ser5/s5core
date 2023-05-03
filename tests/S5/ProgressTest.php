@@ -49,6 +49,20 @@ class ProgressTest extends \S5\TestCase {
 	public function testLeftTime () {
 		$time = time();
 
+		//Проверяем, что при прогрессе 0 нет деления на ноль,
+		//методы получения оставшегося и общего времени не могут определить оставшееся время,
+		//поэтому возвращают false.
+		//Но getElapsedTime() и getElapsedTimeData() возвращают данные с нулём секунд и прочего.
+		$p = new Progress([
+			'progress' => 0,
+		]);
+		$this->assertEquals(0, $p->getElapsedTime());
+		$this->assertEquals('0:00:00', $p->getElapsedTimeData()->hms);
+		$this->assertFalse($p->getLeftTime());
+		$this->assertNull($p->getLeftTimeData());
+		$this->assertFalse($p->getTotalTime());
+		$this->assertNull($p->getTotalTimeData());
+
 		//За 1 минуту уже выполнен 1%.
 		//Ещё осталось выполнить 99% за 99 минут это 1 час, 39 минут, 0 секунд.
 		$p = new Progress([

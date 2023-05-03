@@ -145,18 +145,55 @@ class Progress {
 	}
 
 	/**
-	 * Возвращает данные по оставшемуся времени: всего секунд, часы, минуты, секунды, строку со вмененем вида "12:34:56".
+	 * Сколько секунд прошло плюс сколько осталось до завершения.
 	 *
 	 * Если прогресс равен нулю - возвращает false.
 	 *
-	 * @return ProgressTimeData|false
+	 * @return int|false
 	 */
-	public function getLeftTimeData () {
-		$leftTimeData = $this->getLeftTime();
-		return ($leftTimeData !== false ? new ProgressTimeData($leftTimeData) : false);
+	public function getTotalTime () {
+		if (!$this->progress) {
+			return false;
+		} else {
+			return $this->getElapsedTime() + $this->getLeftTime();
+		}
 	}
 
-	public function getTotalTime (): int {
-		return $this->getElapsedTime() + $this->getLeftTime();
+
+
+	/**
+	 * Возвращает данные по прошедшему времени: всего секунд, часы, минуты, секунды, строку со вмененем вида "12:34:56".
+	 */
+	public function getElapsedTimeData (): ProgressTimeData {
+		return $this->getTimeData('getElapsedTime');
+	}
+
+	/**
+	 * Возвращает данные по оставшемуся времени: всего секунд, часы, минуты, секунды, строку со вмененем вида "12:34:56".
+	 *
+	 * Если прогресс равен нулю - возвращает null.
+	 *
+	 * @return ProgressTimeData|null
+	 */
+	public function getLeftTimeData () {
+		return $this->getTimeData('getLeftTime');
+	}
+
+	/**
+	 * Возвращает данные по сумме прошедшего и оставшегося времени: всего секунд, часы, минуты, секунды, строку со вмененем вида "12:34:56".
+	 *
+	 * Если прогресс равен нулю - возвращает null.
+	 *
+	 * @return ProgressTimeData|null
+	 */
+	public function getTotalTimeData () {
+		return $this->getTimeData('getTotalTime');
+	}
+
+
+
+	protected function getTimeData ($methodName) {
+		$timeData = $this->$methodName();
+		return ($timeData !== false ? new ProgressTimeData($timeData) : null);
 	}
 }
