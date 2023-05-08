@@ -5,6 +5,16 @@ class PdoAdapter extends AbstractAdapter {
 	protected \PDO $pdo;
 	protected int  $affectedRows = 0;
 
+	/**
+	 * Ctor.
+	 *
+	 * ```
+	 * $pdo = new \PDO('mysql:host=localhost',             $user, $password);
+	 * $pdo = new \PDO('mysql:host=localhost;dbname=',     $user, $password);
+	 * $pdo = new \PDO('mysql:host=localhost;dbname=test', $user, $password);
+	 * $pdo = new \PDO('mysql:host=localhost;dbname=test', 'root');
+	 * ```
+	 */
 	public function __construct (\PDO $pdo) {
 		$this->pdo = $pdo;
 	}
