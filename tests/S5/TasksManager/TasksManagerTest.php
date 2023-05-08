@@ -75,9 +75,12 @@ class TasksManagerTest extends \S5\TestCase {
 			'updated_at'  => $gotTask->updated_at,
 			'started_at'  => null,
 			'finished_at' => null,
+			'_type_code'  => 'test',
 			'_type_name'  => 'Тест',
+			'_state_code' => 'new',
 			'_state_name' => 'Новая',
 			'_progress'   => new Progress(['start_time' => $gotTask->started_at]),
+			'_logs'       => [],
 		];
 		$this->assertEquals($expectedTask, $gotTask);
 		$this->assertEquals($gotTask->created_at, $gotTask->updated_at);
@@ -96,9 +99,12 @@ class TasksManagerTest extends \S5\TestCase {
 			'updated_at'  => $gotTask->updated_at,
 			'started_at'  => null,
 			'finished_at' => null,
+			'_type_code'  => 'test',
 			'_type_name'  => 'Тест',
+			'_state_code' => 'done',
 			'_state_name' => 'Готово',
 			'_progress'   => new Progress(['start_time' => $gotTask->started_at, 'progress' => 100]),
+			'_logs'       => [],
 		];
 		$this->assertEquals($expectedTask, $gotTask);
 
@@ -132,9 +138,12 @@ class TasksManagerTest extends \S5\TestCase {
 			'updated_at'  => $gotTask->updated_at,
 			'started_at'  => null,
 			'finished_at' => null,
+			'_type_code'  => 'test',
 			'_type_name'  => 'Тест',
+			'_state_code' => 'running',
 			'_state_name' => 'В работе',
 			'_progress'   => new Progress(['start_time' => $gotTask->started_at]),
+			'_logs'       => [],
 		];
 		$this->assertEquals($expectedTask, $gotTask);
 
@@ -152,9 +161,12 @@ class TasksManagerTest extends \S5\TestCase {
 			'updated_at'  => $gotTask->updated_at,
 			'started_at'  => null,
 			'finished_at' => null,
+			'_type_code'  => 'test',
 			'_type_name'  => 'Тест',
+			'_state_code' => 'done',
 			'_state_name' => 'Готово',
 			'_progress'   => new Progress(['start_time' => $gotTask->started_at, 'progress' => 100]),
+			'_logs'       => [],
 		];
 		$this->assertEquals($expectedTask, $gotTask);
 
@@ -174,21 +186,31 @@ class TasksManagerTest extends \S5\TestCase {
 
 		extract($this->_createListData($tm));
 
-		$this->assertCount(8, $tm->getList());
-		$this->assertCount(8, $tm->getList(['type_ids'  => $typeIdsList]));
-		$this->assertCount(8, $tm->getList(['type_ids'  => false, 'state_id' => false, 'ids' => false]));
-		$this->assertCount(4, $tm->getList(['type_ids'  => 2]));
-		$this->assertCount(8, $tm->getList(['state_ids' => $stateIdsList]));
-		$this->assertCount(4, $tm->getList(['state_ids' => $tm::RUNNING]));
-		$this->assertCount(3, $tm->getList(['ids'       => '1,2,3']));
-		$this->assertCount(1, $tm->getList(['ids'       => 1]));
-		$this->assertCount(0, $tm->getList(['ids'       => 100]));
+		$testData = [
+			[8, []],
+			[8, ['type_ids'  => $typeIdsList]],
+			[8, ['type_ids'  => false, 'state_id' => false, 'ids' => false]],
+			[4, ['type_ids'  => 2]],
+			[8, ['state_ids' => $stateIdsList]],
+			[4, ['state_ids' => $tm::RUNNING]],
+			[3, ['ids'       => '1,2,3']],
+			[1, ['ids'       => 1]],
+			[0, ['ids'       => 100]],
+		];
+		foreach ($testData as $e) {
+			$expectedAmount = $e[0];
+			$params         = $e[1];
+			$this->assertEquals($expectedAmount, $tm->count($params));
+			$this->assertCount($expectedAmount,  $tm->getList($params));
+		}
 
 		$taskId = 1;
 		foreach ($typeIdsList as $typeId) {
 			foreach ($stateIdsList as $stateId) {
 				for ($a = 1; $a <= 2; $a++) {
-					$this->assertCount(1, $tm->getList(['type_ids' => $typeId, 'state_id' => $stateId, 'ids' => $taskId++]));
+					$params = ['type_ids' => $typeId, 'state_id' => $stateId, 'ids' => $taskId++];
+					$this->assertEquals(1, $tm->count($params));
+					$this->assertCount(1,  $tm->getList($params));
 				}
 			}
 		}
@@ -217,24 +239,18 @@ class TasksManagerTest extends \S5\TestCase {
 
 	public function testNormalRun () {
 		//Будем выполнять каждую задачу в 10 шагов. Каждый шаг - 1 сек.
-		//Обновление прогресса - каждые 2 секунды.
-		//Соответственно, обновление прогресса и лога будет происходить каждый второй шаг.
-		$progressUpdatesAmount = 0;
-		$dbAdapter = new CallbackAdapter(function ($type, $p) use (&$progressUpdatesAmount) {
-			$r = $this->_dbAdapter->$type(...$p);
-			if ($type == 'query' and preg_match('/SET\s+progress\s*=\s*\d+/sui', $p[0])) {
-				$progressUpdatesAmount++;
-			}
-			return $r;
-		});
 
-		$nowTs         = time();
-		$runTimeGetter = function () use (&$nowTs) {
-			return $nowTs++;
-		};
+		$createTimeString = '2000-01-01 00:00:00';
+		$runTimeString    = '2000-01-02 00:00:00';
+		$ts               = strtotime($createTimeString);
+		$runTimeGetter    = function () use (&$ts) { return $ts; };
+		$runTimeInc       = function () use (&$ts) { $ts++; };
 
 
-		$tm = $this->_initStorage(compact('dbAdapter', 'runTimeGetter'));
+		$tm = $this->_initStorage([
+			'progressUpdateDelay' => 0,
+			'runTimeGetter'       => $runTimeGetter,
+		]);
 
 
 		$functionTypeId = $this->_createType($tm, [
@@ -264,44 +280,84 @@ class TasksManagerTest extends \S5\TestCase {
 		//
 		//Выполняться они будут в порядке 2, 3, 4.
 		//Задача №1, самая старая, будет пропущена.
-		$doneTask = $tm->create([
+		$taskIdsList = [];
+
+		$taskIdsList[] = $tm->create([
 			'type_id'  => $functionTypeId,
 			'state_id' => $tm::DONE,
 		]);
-		$functionTask = $tm->create([
+		$taskIdsList[] = $tm->create([
 			'type_id' => $functionTypeId,
 		]);
-		$classTask = $tm->create([
+		$taskIdsList[] = $tm->create([
 			'type_id' => $classTypeId,
 		]);
-		$hashTask = $tm->create([
+		$taskIdsList[] = $tm->create([
 			'type_id' => $hashTypeId,
 		]);
 
-		//Запускаем выполнение всех задач со своим time_getter
+		//Проверяем, что начальные данные задач правильные
+		foreach ($taskIdsList as $taskId) {
+			$task = $tm->get($taskId);
+			$this->assertEquals($createTimeString, $task->created_at);
+			$this->assertEquals($createTimeString, $task->updated_at);
+			$this->assertNull($task->started_at);
+			$this->assertNull($task->finished_at);
+			if ($taskId > 1) {
+				$this->assertEquals($tm::NEW, $task->state_id);
+				$this->assertEquals(0,        $task->progress);
+			}
+		}
+
+		//Запускаем выполнение всех задач со своим time_getter,
+		//типа через сутки после создания
+		$ts = strtotime($runTimeString);
+
+		TasksProcessor::$tm                   = $tm;
+		TasksProcessor::$runTimeGetter        = $runTimeGetter;
+		TasksProcessor::$runTimeInc           = $runTimeInc;
+		TasksProcessor::$taskId               = 2;
+		TasksProcessor::$tasksRuntimeDataHash = [];
+
 		$tm->run([
 			'callbacks_hash' => [
 				'object' => new TasksCallbackClass(),
 			],
 		]);
 
+		//Проверяем, каков был ход выполнения задач.
+		//Внутри TasksProcessor::run() делать $this->assert*() толку нет:
+		//исключения PHPUnit не будут выводиться на экран, а будут писаться в логи задачи.
+		$this->assertCount(3, TasksProcessor::$tasksRuntimeDataHash);
+		foreach (TasksProcessor::$tasksRuntimeDataHash as $taskId => $taskDataList) {
+			foreach ($taskDataList as $recordIndex => $taskData) {
+				$this->assertEquals($taskData['expected'], $taskData['got'], "Task #$taskId, record $recordIndex");
+			}
+		}
+
 		//Проверяем, что вышло
+		$tasksList = $tm->getList();
+
 		$expectedLogStringsList = [];
 		for ($a = 10; $a <= 100; $a+=10) {
 			$expectedLogStringsList[] = "$a;";
 		}
 
-		$tasksList = $tm->getList();
-
-		//Каждая из трёх задач обновляется 5 раз - итого 15
-		$this->assertEquals(15, $progressUpdatesAmount);
-
 		//В итоге в БД должно быть 4 задачи с прогрессом 100, в статусе DONE.
 		//У наших выполненных - по 5 записей в логе.
+		$tenSeconds = 0;
 		foreach ($tasksList as $task) {
-			$this->assertEquals($tm::DONE, $task->state_id);
+			$this->assertEquals($createTimeString, $task->created_at);
+			$this->assertEquals($tm::DONE,         $task->state_id, "Expected state: done, got $task->_state_code");
 			if ($task->id > 1) {
+				$this->assertEquals(100, $task->progress);
 				$this->assertEquals($expectedLogStringsList, $tm->getLogTextsList(['task_ids' => $task->id]));
+				$startedAtSecondsString  = str_pad($tenSeconds, 2, '0', STR_PAD_RIGHT);
+				$finishedAtSecondsString = $tenSeconds.'9';
+				$this->assertEquals("2000-01-02 00:00:$startedAtSecondsString",  $task->started_at,  "Task #$task->id");
+				$this->assertEquals("2000-01-02 00:00:$finishedAtSecondsString", $task->updated_at,  "Task #$task->id");
+				$this->assertEquals("2000-01-02 00:00:$finishedAtSecondsString", $task->finished_at, "Task #$task->id");
+				$tenSeconds++;
 			}
 		}
 	}
@@ -343,11 +399,12 @@ class TasksManagerTest extends \S5\TestCase {
 	private function _initStorage (array $params = []): TasksManager {
 		$tm = new TasksManager(
 			$params + [
-			'dbAdapter'           => $this->_dbAdapter,
-			'dbUtils'             => $this->_dbUtils,
-			'progressUpdateDelay' => 2,
-			'lockFilePath'        => __DIR__.'/files/.lock',
-		]);
+				'dbAdapter'           => $this->_dbAdapter,
+				'dbUtils'             => $this->_dbUtils,
+				'progressUpdateDelay' => 2,
+				'lockFilePath'        => __DIR__.'/files/.lock',
+			]
+		);
 		$tm->deleteStorage();
 		$tm->initStorage();
 		return $tm;
@@ -388,25 +445,50 @@ class TasksManagerTest extends \S5\TestCase {
 
 
 
-function tasksCallbackFunction (\Closure $taskUpdater, array $params) {
-	for ($progress = 10; $progress <= 100; $progress+=10) {
-		$taskUpdater($progress, "$progress;");
+class TasksProcessor {
+	public static TasksManager $tm;
+	public static \Closure     $runTimeGetter;
+	public static \Closure     $runTimeInc;
+	public static int          $taskId;
+	public static array        $tasksRuntimeDataHash;
+
+	public static function run (\Closure $taskUpdater, array $params) {
+		for ($progress = 10; $progress <= 100; $progress += 10) {
+			$taskUpdater($progress, "$progress;");
+			$task = static::$tm->get(static::$taskId);
+			static::$tasksRuntimeDataHash[static::$taskId][] = [
+				'expected' => [
+					'updated_at'       => date('Y-m-d H:i:s', (static::$runTimeGetter)()),
+					'progress'         => $progress,
+					'elapsed_percents' => $progress,
+				],
+				'got' => [
+					'updated_at'       => $task->updated_at,
+					'progress'         => $task->progress,
+					'elapsed_percents' => $task->_progress->getElapsedPercents(),
+				],
+			];
+			(static::$runTimeInc)();
+		}
+		static::$taskId++;
 	}
 }
 
 
+
+function tasksCallbackFunction (\Closure $taskUpdater, array $params) {
+	TasksProcessor::run($taskUpdater, $params);
+}
 
 class TasksCallbackStaticClass {
 	public static function run (\Closure $taskUpdater, array $params) {
-		tasksCallbackFunction($taskUpdater, $params);
+		TasksProcessor::run($taskUpdater, $params);
 	}
 }
 
-
-
 class TasksCallbackClass {
 	public function run (\Closure $taskUpdater, array $params) {
-		tasksCallbackFunction($taskUpdater, $params);
+		TasksProcessor::run($taskUpdater, $params);
 	}
 }
 

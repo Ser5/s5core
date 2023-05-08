@@ -85,6 +85,7 @@ class TasksManager {
 		$string   = fn() => v::stringVal();
 		$string1  = fn() => v::stringVal()->length(1);
 		$ids      = fn() => v::anyOf(v::falseVal(), $min1(), v::each($min1()), $string());
+		$limit    = fn() => v::anyOf(v::stringVal(), v::arrayVal());
 		$progress = fn() => v::intVal()->min(0)->max(100);
 
 		$this->createValidator = (new v())
@@ -106,7 +107,7 @@ class TasksManager {
 			->key('type_ids',  $ids(),    false)
 			->key('state_ids', $ids(),    false)
 			->key('order_by',  $string(), false)
-			->key('limit',     v::anyOf(v::stringVal(), v::arrayVal()), false)
+			->key('limit',     $limit(),  false)
 		;
 
 		$this->countValidator = (new v())
@@ -115,9 +116,9 @@ class TasksManager {
 		;
 
 		$this->getLogsListValidator = (new v())
-			->key('ids',      $ids(), false)
-			->key('type_ids', $ids(), false)
-			->key('limit',    v::anyOf(v::falseVal(), v::intVal(), v::stringVal()), false)
+			->key('ids',      $ids(),   false)
+			->key('task_ids', $ids(),   false)
+			->key('limit',    $limit(), false)
 		;
 
 		$this->createTypeValidator = (new v())
@@ -163,10 +164,13 @@ class TasksManager {
 	 */
 	public function create (array $data): int {
 		$this->assert($data, $this->createValidator);
+		$dateTimeString = $this->getDateTimeString();
 		$data += [
-			'state_id' => static::NEW,
-			'progress' => 0,
-			'params'   => '',
+			'state_id'   => static::NEW,
+			'progress'   => 0,
+			'params'     => '',
+			'created_at' => $dateTimeString,
+			'updated_at' => $dateTimeString,
 		];
 		$this->dbAdapter->query($this->dbUtils->getInsert($this->tasksQueue, $data));
 		return $this->dbAdapter->getInsertId();
@@ -187,6 +191,7 @@ class TasksManager {
 	public function edit (int $taskId, array $data) {
 		if ($data) {
 			$this->assert($data, $this->editValidator);
+			$data['updated_at'] = $this->getDateTimeString();
 			$this->dbAdapter->query($this->dbUtils->getUpdate($this->tasksQueue, 'id', "$taskId", $data));
 		}
 	}
@@ -358,12 +363,12 @@ class TasksManager {
 	 * } $params
 	 */
 	public function getLogsList (array $params = []): array {
+		$this->assert($params, $this->getLogsListValidator);
 		$p = $params + [
 			'ids'      => false,
 			'task_ids' => false,
 			'limit'    => false,
 		];
-		$this->assert($p, $this->getLogsListValidator);
 
 		//WHERE
 		$whereString = '';
@@ -393,7 +398,10 @@ class TasksManager {
 
 
 	public function getLogTextsList (array $params = []): array {
-		return array_map(fn($l)=>$l->id, $this->getLogsList(...$params));
+		return array_map(
+			fn($l) => $l->text,
+			$this->getLogsList($params)
+		);
 	}
 
 
@@ -460,7 +468,15 @@ class TasksManager {
 
 		//Берём новую задачу в работу - ставим ей статус "Выполняется"
 		$nowString = date('Y-m-d H:i:s', $timeGetter());
-		$query     = "UPDATE $tasksQueue SET state_id = ".static::RUNNING.", progress = 0, started_at = '$nowString' WHERE id = $task->id";
+		$query     =
+			"UPDATE $tasksQueue
+			SET
+				state_id   = ".static::RUNNING.",
+				progress   = 0,
+				started_at = '$nowString',
+				updated_at = '$nowString'
+			WHERE id = $task->id
+			";
 		$dbAdapter->query($query);
 
 		$lastUpdateTs   = $timeGetter();
@@ -476,7 +492,7 @@ class TasksManager {
 				$progress = 100;
 			}
 			if ($isDone or $nowTs >= $lastUpdateTs + $this->progressUpdateDelay) {
-				$this->setProgressAndDoneState($task->id, $progress, $isDone);
+				$this->setProgressAndDoneState($task->id, $progress, $isDone, $nowTs);
 				$this->createLogsList($task->id, $logStringsList);
 				$logStringsList = [];
 				$lastUpdateTs   = $nowTs;
@@ -512,12 +528,13 @@ class TasksManager {
 
 
 
-	protected function setProgressAndDoneState (int $taskId, int $progress, bool $isDone) {
-		$setString = "progress = $progress";
+	protected function setProgressAndDoneState (int $taskId, int $progress, bool $isDone, int $nowTs) {
+		$nowString = date('Y-m-d H:i:s', $nowTs);
+		$setString = "progress = $progress, updated_at = '$nowString'";
 		if ($isDone) {
 			$setString .=
 				", state_id    = ".static::DONE.
-				", finished_at = '".date('Y-m-d H:i:s', ($this->runTimeGetter)())."'"
+				", finished_at = '$nowString'"
 			;
 		}
 		$query = "UPDATE $this->tasksQueue SET $setString WHERE id = $taskId";
@@ -587,6 +604,12 @@ class TasksManager {
 		} catch (\Exception $e) {
 			throw new $e;
 		}
+	}
+
+
+
+	protected function getDateTimeString () {
+		return date('Y-m-d H:i:s', ($this->runTimeGetter)());
 	}
 
 
