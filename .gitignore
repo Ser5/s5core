@@ -15,4 +15,4 @@ composer.lock
 /tests/S5/TasksManager/files/
 
 /demos/tasks_viewer/assets/
-/demos/tasks_viewer/db.php
+/demos/tasks_viewer/bg_workers/file/db.php

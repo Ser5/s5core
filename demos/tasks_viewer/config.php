@@ -7,7 +7,7 @@ $d = $GLOBALS['phpUnitParams']['db'];
 
 
 
-$DIC['pdo'] = new \PDO("mysql:dbname=$d[name];host=$d[host];charset=UTF8", $d['login'], $d['password']);
+$DIC['pdo'] = new \PDO("mysql:host=$d[host];dbname=$d[name];charset=UTF8", $d['login'], $d['password']);
 
 $DIC['dbAdapter'] = new \S5\Db\Adapters\PdoAdapter($DIC['pdo']);
 
@@ -25,4 +25,4 @@ $DIC['tasksViewer'] = new \S5\TasksManager\Viewer\TasksViewer(
 
 
 
-$dbFile = new \S5\IO\File(__DIR__.'/db.php');
+$DIC['dbFile'] = new \S5\IO\File(__DIR__.'/bg_workers/file/db.php');

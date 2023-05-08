@@ -1,11 +1,11 @@
 <?
-require_once 'config.php';
+require_once __DIR__.'/../../config.php';
 $tm = $DIC['tasksManager'];
 
 
 
 function initDb () {
-	global $dbFile, $tm;
+	global $DIC, $tm;
 	$nowString = date('Y-m-d H:i:s');
 
 	$dbData = [
@@ -70,7 +70,7 @@ function initDb () {
 		'finished_at' => null,
 	];
 
-	$dbFile->putPhpReturn($dbData);
+	$DIC['dbFile']->putPhpReturn($dbData);
 
 	return $dbData;
 }
@@ -105,5 +105,5 @@ for ($progValue = $progStep; $progValue <= 100; $progValue += $progStep) {
 	}
 
 	//Записываем для дальнейшего считывания через ajax.php
-	$dbFile->putPhpReturn($dbData);
+	$DIC['dbFile']->putPhpReturn($dbData);
 }

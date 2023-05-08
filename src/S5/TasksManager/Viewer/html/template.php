@@ -43,13 +43,12 @@
 				</td>
 				<td class="tasks__cell tasks__item-log">
 					<div class="tasks__log">
-						<template v-for="log in task._logs_list" :key="log.id">
-							<div
-								:class = "'tasks__log-item tasks__'+log.type"
-								:style = "'padding-left:' + ((log.level-1)*20) + 'px;'"
-								v-html = "log.message"
-							></div>
-						</template>
+						<div
+							v-for="log in task._logs" :key="log.id"
+							:class = "'tasks__log-item tasks__'+log.type"
+							:style = "'padding-left:' + ((log.level-1)*20) + 'px;'"
+							v-html = "log.message"
+						></div>
 					</div>
 				</td>
 			</tr>

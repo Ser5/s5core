@@ -1,5 +1,5 @@
 <?
-require_once 'config.php';
+require_once __DIR__.'/../../config.php';
 $tm = $DIC['tasksManager'];
 
 
@@ -15,7 +15,7 @@ $pageNumber = $_REQUEST['page']  ?? 1;
 
 
 
-$dbData = include $dbFile->getPath() ?: [];
+$dbData = include $DIC['dbFile'] ?: [];
 $pager = new \S5\Pager\Pager([
 	'items_amount'   => count($dbData),
 	'items_per_page' => $limit,
