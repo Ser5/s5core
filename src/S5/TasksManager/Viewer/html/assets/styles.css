@@ -1,17 +1,27 @@
-.tasks {}
+.tasks {box-sizing:border-box;}
 
-.tasks__pager {display:flex; margin-bottom:20px; font-size:14px;}
-.tasks__pager-item {padding:3px 10px; color:#333; text-decoration:none;}
-.tasks__pager-numbers {display:flex; border:1px solid #ccc; border-radius:4px;}
+.tasks__options {display:flex; margin-bottom:20px; font-size:14px;}
+
+.tasks__ipp {display:flex; align-items:center;}
+
+.tasks__ipp-select, .tasks__pager-numbers {border:1px solid #ccc; border-radius:4px;}
+.tasks__ipp-select, .tasks__pager-item    {padding-top:3px; padding-bottom:3px; color:#333;}
+
+.tasks__ipp-text {padding:4px 0 4px 0; margin-right:5px;}
+.tasks__ipp-select {margin-right:30px; outline:none; background:none; font-family:inherit; font-size:inherit;}
+
+.tasks__pager {display:flex;}
+.tasks__pager-item {padding-left:10px; padding-right:10px; text-decoration:none; user-select:none;}
+.tasks__pager-numbers {display:flex;}
 .tasks__pager-number:not(:last-child) {border-right:1px solid #ccc;}
-.tasks__pager-active {background:#ccc;}
+.tasks__pager-active {background:#eaeaea;}
 .tasks__pager-gap {cursor:default;}
 .tasks__pager-first {}
 .tasks__pager-prev {}
 .tasks__pager-next {}
 .tasks__pager-last {}
 
-.tasks__list {border-collapse:collapse; width:100%;}
+.tasks__list {border-collapse:collapse; width:100%; border-radius:4px;}
 
 .tasks__list th,
 .tasks__list td {padding:5px 10px; border:1px solid #ccc; text-align:left; vertical-align:top;}
@@ -36,7 +46,7 @@
 
 .tasks__state {}
 
-.tasks__log {overflow:auto; max-height:100px/*200px*/; resize:both; font-size:14px; line-height:100%;}
+.tasks__log {overflow:auto; max-height:100px; resize:both; font-size:14px; line-height:100%;}
 .tasks__log-item {}
 
 .tasks__new {}

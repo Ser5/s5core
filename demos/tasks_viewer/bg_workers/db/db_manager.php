@@ -7,9 +7,6 @@ $tm        = $DIC['tasksManager'];
 
 function initStorage () {
 	global $dbAdapter, $tm;
-	//$dbAdapter->query('DROP DATABASE IF EXISTS tasks_viewer_demo');
-	//$dbAdapter->query('CREATE DATABASE tasks_viewer_demo CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_520_ci');
-	//$dbAdapter->query('USE tasks_viewer_demo');
 	$tm->deleteStorage();
 	$tm->initStorage();
 

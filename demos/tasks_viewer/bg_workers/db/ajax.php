@@ -6,16 +6,16 @@ initStorageIfNotExists();
 
 
 
-$limit      = $_REQUEST['limit'] ?? 3;
-$pageNumber = $_REQUEST['page']  ?? 1;
+$itemsPerPage = $_REQUEST['items_per_page'] ?? 10;
+$pageNumber   = $_REQUEST['page']           ?? 1;
 
 
 
 $pager = new \S5\Pager\Pager([
 	'items_amount'   => $tm->count(),
-	'items_per_page' => $limit,
+	'items_per_page' => $itemsPerPage,
 	'page_number'    => $pageNumber,
-	'linker'         => fn($p) => "/?limit=$limit&page=$p",
+	'linker'         => fn($p) => "/?page=$p",
 ]);
 $pagerResult = $pager->get();
 
