@@ -7,6 +7,7 @@ class Compressor {
 	use \S5\ConstructTrait;
 
 	protected string $lockFilePath;
+	protected array  $defaultDirData = [];
 
 	protected File $lockFile;
 	protected bool $isSkipLock = false;
@@ -33,6 +34,29 @@ class Compressor {
 
 
 
+	public function processDefaultDirectoriesList () {
+		if (!$this->lock()) {
+			return;
+		}
+
+		if (!isset($this->defaultDirData['path'])) {
+			throw new \Exception("Не указан путь к папке по умолчанию");
+		}
+		if (!is_dir($this->defaultDirData['path'])) {
+			throw new \Exception("Указанная папка по умолчанию не существует: [$this->defaultDirData[path]]");
+		}
+
+		$this->isSkipLock = true;
+		if (@!$this->defaultDirData['subdirs']) {
+			$this->processDirectory($this->defaultDirData['path']);
+		} else {
+			$this->processDirectoriesList($this->defaultDirData['path'], $this->defaultDirData['subdirs']);
+		}
+		$this->isSkipLock = false;
+	}
+
+
+
 	public function processDirectoriesList (string $dirPath, array $subdirNamesList) {
 		if (!$this->lock()) {
 			return;
@@ -52,7 +76,20 @@ class Compressor {
 			return;
 		}
 
+		if (!is_dir($dirPath)) {
+			return;
+		}
+
 		$filePathsList = $this->getFilePathsList($dirPath);
+
+		$oxipngCommandStringGetter = fn($fileName) => "squoosh-cli --oxipng '{\"level\":6}' '$fileName'";
+
+		$lossyCommandStringGettersList = [
+			'webp' => function ($fileName) { return "cwebp -q 85 -m 6 -f 35 -pre 0 -partition_limit 0 -metadata icc -mt -short -o '$fileName.webp' -- '$fileName'"; },
+			'avif' => function ($fileName) { return "npx avif --quality=78 --effort=5 --append-ext --input='$fileName'"; },
+		];
+
+		echo "Папка $dirPath\n";
 
 		foreach ($filePathsList as $filePath) {
 			$fullFilePath = "$dirPath/$filePath";
@@ -66,36 +103,29 @@ class Compressor {
 
 			$fileDirPath = dirname($fullFilePath);
 
-			$getCommandString = fn(string $commandString, string $fileName) => "cd '$fileDirPath' && timeout 200 $commandString '$fileName'";
-			$runCommand       = fn(string $commandString, string $fileName) => passthru($getCommandString($commandString, $fileName));
+			$getCommandString = fn($commandStringGetter, string $fileName) => "cd '$fileDirPath' && timeout 200 " . $commandStringGetter($fileName);
+			$runCommand       = fn($commandStringGetter, string $fileName) => passthru($getCommandString($commandStringGetter, $fileName));
 
-			//jpg, png
+			//webp и avif создаём только для jpg-файлов.
+			//png не трогаем, чтобы все иконки и графику не помутить.
 			$fileName = basename($fullFilePath);
-			if (preg_match('/\.jpe?g$/', $filePath)) {
-				$commandString = 'squoosh-cli --mozjpeg \'{"quality":85, "baseline":false, "arithmetic":false, "progressive":true, "optimize_coding":true, "smoothing":0,"color_space":3, "quant_table":3, "trellis_multipass":false, "trellis_opt_zero":false, "trellis_opt_table":false, "trellis_loops":1, "auto_subsample":true, "chroma_subsample":2, "separate_chroma_quality":false, "chroma_quality":75}\'';
-				echo "Оптимизация через mozjpeg\n";
-			} elseif (preg_match('/\.png$/', $filePath)) {
-				$commandString = 'squoosh-cli --oxipng \'{"level":6}\'';
+			if (preg_match('/\.png$/', $fileName)) {
+				//png
 				echo "Оптимизация через oxipng\n";
-			}
-			$runCommand($commandString, $fileName);
-
-			//webp, avif
-			$originalFileSize = filesize($fullFilePath);
-			static $commandStringsList = [
-				'webp' => 'squoosh-cli --webp \'{"quality":85, "method":4, "sns_strength":50, "filter_strength":60, "filter_type":1, "segments":4, "pass":1, "show_compressed":0, "preprocessing":0, "autofilter":0, "partition_limit":0, "alpha_compression":1, "alpha_filtering":1, "alpha_quality":100, "lossless":0}\'',
-				'avif' => 'squoosh-cli --avif \'{"speed":2}\'',
-			];
-			foreach ($commandStringsList as $ext => $commandString) {
-				echo "Создание $ext\n";
-				$newFilePath = "$fullFilePath.$ext";
-				$newFileName = basename($newFilePath);
-				copy($fullFilePath, $newFilePath);
-				$runCommand($commandString, $newFileName);
-				$newFileSize = filesize($newFilePath);
-				if ($newFileName >= $originalFileSize) {
-					echo "$ext по размеру больше оригинала, удаляем";
-					unlink($newFilePath);
+				$runCommand($oxipngCommandStringGetter, $fileName);
+			} elseif (preg_match('/\.jpe?g$/', $fileName)) {
+				//webp, avif
+				$originalFileSize = filesize($fullFilePath);
+				foreach ($lossyCommandStringGettersList as $ext => $commandStringGetter) {
+					echo "Создание $ext\n";
+					//dump($getCommandString($commandStringGetter, $fileName));
+					$runCommand($commandStringGetter, $fileName);
+					$newFilePath = "$fullFilePath.$ext";
+					$newFileSize = filesize($newFilePath);
+					if ($newFileSize >= $originalFileSize) {
+						echo "$ext по размеру больше оригинала, удаляем";
+						unlink($newFilePath);
+					}
 				}
 			}
 
@@ -223,8 +253,8 @@ class Compressor {
 	public function checkRequirements (): RequirementsResult {
 		$result = new RequirementsResult();
 
-		foreach (['node', 'exiftool', 'squoosh'] as $name) {
-			$r = exec("which " . ($name == 'squoosh' ? 'squoosh-cli' : $name));
+		foreach (['node', 'exiftool', 'squoosh-cli', 'cwebp', 'avif-cli'] as $name) {
+			$r = exec("which $name");
 			if (!$r) {
 				$result->itemsHash[$name]->setInvalid("$name не установлен");
 			}

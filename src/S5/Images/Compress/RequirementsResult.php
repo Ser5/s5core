@@ -7,10 +7,12 @@ class RequirementsResult {
 
 	public function __construct () {
 		$this->itemsHash = [
-			'node'     => new RequirementsItemResult(),
-			'node16'   => new RequirementsItemResult(),
-			'exiftool' => new RequirementsItemResult(),
-			'squoosh'  => new RequirementsItemResult(),
+			'node'        => new RequirementsItemResult(),
+			'node16'      => new RequirementsItemResult(),
+			'exiftool'    => new RequirementsItemResult(),
+			'squoosh-cli' => new RequirementsItemResult(),
+			'cwebp'       => new RequirementsItemResult(),
+			'avif-cli'    => new RequirementsItemResult(),
 		];
 	}
 }
