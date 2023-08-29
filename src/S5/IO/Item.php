@@ -37,7 +37,7 @@ abstract class Item implements IStringablePath {
 	 */
 	protected function setPath ($path) {
 		if (preg_match('/[+*?]/', $path)) {
-			throw new \InvalidArgumentException("Disallowed characters in the path: [$path]");
+			throw new \InvalidArgumentException("Путь содержит недопустимые символы: [$path]");
 		}
 		$this->path = $this->initPath($path);
 	}
@@ -183,7 +183,7 @@ abstract class Item implements IStringablePath {
 	 */
 	protected function initItem ($path, $params = false) {
 		if (!file_exists($path)) {
-			throw new \Exception("Path does not exist: $path");
+			throw new \Exception("Путь не существует: $path");
 		}
 		if (is_dir($path)) {
 			return new Directory($path, $params);

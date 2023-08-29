@@ -37,7 +37,7 @@ class Directory extends Item {
 		}
 		@$path = tempnam($dirPath, $prefix);
 		if (!$path) {
-			throw new \Exception("Can't create temp dir");
+			throw new \Exception("Не удалось создать временную папку внутри [$dirPath] с префиксом [$prefix]");
 		}
 		unlink($path);
 		$dir = new static($path);
@@ -68,10 +68,10 @@ class Directory extends Item {
 			return false;
 		}
 		if (is_file($path)) {
-			throw new \Exception("File with the same path already exists: $path");
+			throw new \Exception("Уже существует файл с таким путём: $path");
 		}
 		if (!mkdir($path, $this->params['dirs_mod'], true)) {
-			throw new \Exception("Can't create directory $path");
+			throw new \Exception("Не удалось создать папку $path");
 		}
 		return true;
 	}
@@ -103,12 +103,12 @@ class Directory extends Item {
 		}
 
 		if (file_exists($newPath) and !$isOverwrite) {
-			throw new \Exception("File with the same path already exists: ".$currentPath);
+			throw new \Exception("Уже существует файл с таким путём: ".$currentPath);
 		}
 
 		$r = rename($currentPath, $newPath);
 		if (!$r) {
-			throw new \Exception("Can't rename \"$this\" to \"$name\"");
+			throw new \Exception("Не удалось переименовать \"$this\" в \"$name\"");
 		}
 
 		$this->setPath((string)(new Path($newPath)));
@@ -152,7 +152,7 @@ class Directory extends Item {
 
 	public function getItemsList (int $order = SCANDIR_SORT_ASCENDING): ItemsList {
 		if (!is_dir($this->getPath())) {
-			throw new \InvalidArgumentException("Path not found: ".$this->getPath());
+			throw new \InvalidArgumentException("Папка не найдена: ".$this->getPath());
 		}
 		$list = new ItemsList();
 		foreach (scandir($this->getPath(), $order) as $name) {
@@ -206,7 +206,7 @@ class Directory extends Item {
 		preg_match('/^(\d+)([smhdw])?$/', $olderThan, $matches);
 
 		if (!ctype_digit((string)$matches[1])) {
-			throw new \InvalidArgumentException("Invalid numerid part: [$matches[1]]");
+			throw new \InvalidArgumentException("Неверно указанное число: [$matches[1]]");
 		}
 		$t = (int)$matches[1];
 
@@ -219,7 +219,7 @@ class Directory extends Item {
 				case 'h': $olderThan = $t * 3600;   break;
 				case 'd': $olderThan = $t * 86400;  break;
 				case 'w': $olderThan = $t * 604800; break;
-				default: throw new \InvalidArgumentException("Unknown modifier [$matches[1]]");
+				default: throw new \InvalidArgumentException("Неизвестный модификатор [$matches[1]]");
 			}
 		}
 
@@ -243,7 +243,7 @@ class Directory extends Item {
 
 	private function _open () {
 		if (!$dh = opendir($this->getPath())) {
-			throw new \Exception("This directory doesn't exist: $this");
+			throw new \Exception("Папка не существует: $this");
 		}
 		return $dh;
 	}

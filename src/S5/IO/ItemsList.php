@@ -41,14 +41,14 @@ class ItemsList extends \S5\ArrayObject {
 			'desc' => true,
 		);
 		if (!isset($allowedOrderHash[$order])) {
-			throw new \InvalidArgumentException("Unknown sort order");
+			throw new \InvalidArgumentException("Неизвестный порядок сортировки: [$order]. Допустимые значения: asc, desc.");
 		}
 		$this->_sortOrder = ($order == 'asc') ? 1 : -1;
 		$array = $this->getArrayCopy();
 		switch ($by) {
 			case 'path': usort($array, array($this, '_pathsComparer')); break;
 			case 'name': usort($array, array($this, '_namesComparer')); break;
-			default:     throw new \InvalidArgumentException("Unknown sort by");
+			default:     throw new \InvalidArgumentException("Неизвестный источник сортировки: [$by]. Допустимые значения: path, name.");
 		}
 		$this->exchangeArray($array);
 		return $this;

@@ -23,7 +23,7 @@ class File extends Item {
 		if (is_resource($file)) {
 			$resourceType = get_resource_type($file);
 			if ($resourceType != 'stream') {
-				throw new \InvalidArgumentException("Invalid resource type: $resourceType");
+				throw new \InvalidArgumentException("Неверный тип ресурса: [$resourceType]. Ожидался тип \"stream\".");
 			}
 			$meta = stream_get_meta_data($file);
 			$path = $meta['uri'];
@@ -42,7 +42,7 @@ class File extends Item {
 		}
 		$filePath = tempnam($dirPath, $prefix);
 		if (!$filePath) {
-			throw new \Exception("Can't create temp file");
+			throw new \Exception("Не удалось создать временный файл внутри папки [$dirPath] с префиксом [$prefix]");
 		}
 		return new static($filePath);
 	}
@@ -58,7 +58,7 @@ class File extends Item {
 	public function putContents (string $content, int $flags = 0) {
 		$this->_createDir();
 		if (@file_put_contents($this->getPath(), $content, $flags) === false) {
-			throw new \Exception("Can't write to ".$this->getPath());
+			throw new \Exception("Не удалось записать файл ".$this->getPath());
 		}
 	}
 
@@ -67,7 +67,7 @@ class File extends Item {
 	public function getContents (): string {
 		@$content = file_get_contents($this->getPath());
 		if ($content === false) {
-			throw new \Exception("Can't read ".$this->getPath());
+			throw new \Exception("Не удалось прочитать файл ".$this->getPath());
 		}
 		return $content;
 	}
@@ -245,7 +245,7 @@ class File extends Item {
 			$this->_createDir();
 			$this->_handle = fopen($this->getPath(), $openMode);
 			if (!$this->_handle) {
-				throw new \Exception("Can't open ".$this->getPath());
+				throw new \Exception("Не удалось открыть файл ".$this->getPath());
 			}
 		}
 		return $this->_handle;
@@ -287,7 +287,7 @@ class File extends Item {
 			return;
 		}
 		if (!flock($this->_handle, LOCK_UN)) {
-			throw new \Exception("Can't unlock ".$this->getPath());
+			throw new \Exception("Не удалось разблокировать файл ".$this->getPath());
 		}
 		$this->_isLocked = false;
 	}
