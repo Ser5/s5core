@@ -202,6 +202,20 @@ class Directory extends Item {
 
 
 
+	/**
+	 * Удаление старых файлов.
+	 *
+	 * `$directory->deleteOldFilesList('7d')`
+	 *
+	 * Здесь 7 это количество единиц, d - тип единиц. В данном случае это 7 дней.
+	 *
+	 * Допустимые типы:
+	 * s - секунды
+	 * m - минуты
+	 * h - часы
+	 * d - дни
+	 * w - недели
+	 */
 	public function deleteOldFilesList (string $olderThan) {
 		preg_match('/^(\d+)([smhdw])?$/', $olderThan, $matches);
 
@@ -219,7 +233,7 @@ class Directory extends Item {
 				case 'h': $olderThan = $t * 3600;   break;
 				case 'd': $olderThan = $t * 86400;  break;
 				case 'w': $olderThan = $t * 604800; break;
-				default: throw new \InvalidArgumentException("Неизвестный модификатор [$matches[1]]");
+				default: throw new \InvalidArgumentException("Неизвестный тип [$matches[1]]");
 			}
 		}
 
