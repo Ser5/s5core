@@ -5,7 +5,7 @@ namespace S5\Web\Upload;
  * Работа с пхпшным массивом $_FILES.
  */
 class FilesUtils {
-	private static $_fileDataKeysList = array('name', 'tmp_name', 'type', 'error', 'size');
+	private static $_fileDataKeysList = ['name', 'tmp_name', 'type', 'error', 'size'];
 
 	/**
 	 * Достаёт из массива $_FILES указанные данные во вменяемом виде.
@@ -34,55 +34,55 @@ class FilesUtils {
 	 * Но не тут-то было. Пхп в этом случае производит массив дико упоротой структуры.
 	 * Если посмотреть на него, то мы увидим:
 	 * ```
-	 * array(
-	 * 	'div' => array(
-	 * 		'name' => array(
-	 * 			'subdiv' => array(
-	 * 				'file' => array(
+	 * [
+	 * 	'div' => [
+	 * 		'name' => [
+	 * 			'subdiv' => [
+	 * 				'file' => [
 	 * 					0 => '1.txt',
 	 * 					1 => '2.txt',
 	 * 					2 => '3.txt',
-	 * 				),
-	 * 			),
-	 * 		),
-	 * 		'type' => array(
-	 * 			'subdiv' => array(
-	 * 				'file' => array(
+	 * 				],
+	 * 			],
+	 * 		],
+	 * 		'type' => [
+	 * 			'subdiv' => [
+	 * 				'file' => [
 	 * 					0 => 'text/plain',
 	 * 					1 => 'text/plain',
 	 * 					2 => 'text/plain',
-	 * 				),
-	 * 			),
-	 * 		),
-	 * 		'tmp_name' => array(
-	 * 			'subdiv' => array(
-	 * 				'file' => array(
+	 * 				],
+	 * 			],
+	 * 		],
+	 * 		'tmp_name' => [
+	 * 			'subdiv' => [
+	 * 				'file' => [
 	 * 					0 => '/tmp/phpglvlQp',
 	 * 					1 => '/tmp/phpcXbzZv',
 	 * 					2 => '/tmp/phpm3iN8B',
-	 * 				),
-	 * 			),
-	 * 		),
-	 * 		'error' => array(
-	 * 			'subdiv' => array(
-	 * 				'file' => array(
+	 * 				],
+	 * 			],
+	 * 		],
+	 * 		'error' => [
+	 * 			'subdiv' => [
+	 * 				'file' => [
 	 * 					0 => 0,
 	 * 					1 => 0,
 	 * 					2 => 0,
-	 * 				),
-	 * 			),
-	 * 		),
-	 * 		'size' => array(
-	 * 			'subdiv' => array(
-	 * 				'file' => array(
+	 * 				],
+	 * 			],
+	 * 		],
+	 * 		'size' => [
+	 * 			'subdiv' => [
+	 * 				'file' => [
 	 * 					0 => 1,
 	 * 					1 => 1,
 	 * 					2 => 1,
-	 * 				),
-	 * 			),
-	 * 		),
-	 * 	),
-	 * );
+	 * 				],
+	 * 			],
+	 * 		],
+	 * 	],
+	 * ];
 	 * ```
 	 * 
 	 * Лучше бы этого не видеть.
@@ -103,8 +103,8 @@ class FilesUtils {
 	 * 
 	 * Или можно собрать свой массив с более удобным представлением данных:
 	 * ```
-	 * $files = array();
-	 * foreach (array('name', 'tmp_name', 'type', 'error', 'size') as $fileDataKey) {
+	 * $files = [];
+	 * foreach (['name', 'tmp_name', 'type', 'error', 'size'] as $fileDataKey) {
 	 * 		foreach ($_FILES['div'][$fileDataKey]['subdiv']['file'] as $index => $value) {
 	 * 			$files[$index][$fileDataKey] = $value;
 	 * 		}
@@ -120,34 +120,34 @@ class FilesUtils {
 	 * Как раз для сборки такого массива для структуры любого формата и предназначен этот метод.
 	 * Что возвращает он:
 	 * ```
-	 * array(
-	 * 	0 => array(
-	 * 		'name' => '1.txt',
+	 * [
+	 * 	0 => [
+	 * 		'name'     => '1.txt',
 	 * 		'tmp_name' => '/tmp/phpglvlQp',
-	 * 		'type' => 'text/plain',
-	 * 		'error' => 0,
-	 * 		'size' => 1,
-	 * 	),
-	 * 	1 => array(
-	 * 		'name' => '2.txt',
+	 * 		'type'     => 'text/plain',
+	 * 		'error'    => 0,
+	 * 		'size'     => 1,
+	 * 	],
+	 * 	1 => [
+	 * 		'name'     => '2.txt',
 	 * 		'tmp_name' => '/tmp/phpcXbzZv',
-	 * 		'type' => 'text/plain',
-	 * 		'error' => 0,
-	 * 		'size' => 1,
-	 * 	),
-	 * 	2 => array(
-	 * 		'name' => '3.txt',
+	 * 		'type'     => 'text/plain',
+	 * 		'error'    => 0,
+	 * 		'size'     => 1,
+	 * 	],
+	 * 	2 => [
+	 * 		'name'     => '3.txt',
 	 * 		'tmp_name' => '/tmp/phpm3iN8B',
-	 * 		'type' => 'text/plain',
-	 * 		'error' => 0,
-	 * 		'size' => 1,
-	 * 	),
-	 * )
+	 * 		'type'     => 'text/plain',
+	 * 		'error'    => 0,
+	 * 		'size'     => 1,
+	 * 	],
+	 * ]
 	 * ```
 	 * 
 	 * С его помощью пишем так:
 	 * ```
-	 * $files = FilesUtils::getData(array('div', 'subdiv', 'file'));
+	 * $files = FilesUtils::getData(['div', 'subdiv', 'file']);
 	 * $files[0]['name']; //1.txt
 	 * $files[0]['type']; //text/plain
 	 * 
@@ -156,11 +156,8 @@ class FilesUtils {
 	 * 		echo $fileData['type']; //text/plain
 	 * }
 	 * ```
-	 * 
-	 * @param  array $fromKeysList
-	 * @return array
 	 */
-	public static function getData ($fromKeysList) {
+	public static function getData (array $fromKeysList): array {
 		$data = [];
 		array_splice($fromKeysList, 1, 0, '');
 		foreach (static::$_fileDataKeysList as $fileDataKey) {
@@ -190,69 +187,69 @@ class FilesUtils {
 	 * 
 	 * То есть, вместо этого бреда:
 	 * ```
-	 * array(
-	 * 	'div' => array(
-	 * 		'name' => array(
-	 * 			'subdiv' => array(
-	 * 				'file' => array(
+	 * [
+	 * 	'div' => [
+	 * 		'name' => [
+	 * 			'subdiv' => [
+	 * 				'file' => [
 	 * 					0 => '1.txt',
-	 * 				),
-	 * 			),
-	 * 		),
-	 * 		'type' => array(
-	 * 			'subdiv' => array(
-	 * 				'file' => array(
+	 * 				],
+	 * 			],
+	 * 		],
+	 * 		'type' => [
+	 * 			'subdiv' => [
+	 * 				'file' => [
 	 * 					0 => 'text/plain',
-	 * 				),
-	 * 			),
-	 * 		),
-	 * 		'tmp_name' => array(
-	 * 			'subdiv' => array(
-	 * 				'file' => array(
+	 * 				],
+	 * 			],
+	 * 		],
+	 * 		'tmp_name' => [
+	 * 			'subdiv' => [
+	 * 				'file' => [
 	 * 					0 => '/tmp/phpglvlQp',
-	 * 				),
-	 * 			),
-	 * 		),
-	 * 		'error' => array(
-	 * 			'subdiv' => array(
-	 * 				'file' => array(
+	 * 				],
+	 * 			],
+	 * 		],
+	 * 		'error' => [
+	 * 			'subdiv' => [
+	 * 				'file' => [
 	 * 					0 => 0,
-	 * 				),
-	 * 			),
-	 * 		),
-	 * 		'size' => array(
-	 * 			'subdiv' => array(
-	 * 				'file' => array(
+	 * 				],
+	 * 			],
+	 * 		],
+	 * 		'size' => [
+	 * 			'subdiv' => [
+	 * 				'file' => [
 	 * 					0 => 1,
-	 * 				),
-	 * 			),
-	 * 		),
-	 * 	),
-	 * );
+	 * 				],
+	 * 			],
+	 * 		],
+	 * 	],
+	 * ]
 	 * ```
 	 * 
 	 * Получаем вот так вот ожидаемо:
 	 * ```
-	 * array(
-	 * 	'div' => array(
-	 * 		'subdiv' => array(
-	 * 			'file' => array(
-	 * 				0 => array(
-	 * 					'name' => '1.txt',
+	 * [
+	 * 	'div' => [
+	 * 		'subdiv' => [
+	 * 			'file' => [
+	 * 				0 => [
+	 * 					'name'     => '1.txt',
 	 * 					'tmp_name' => '/tmp/phpglvlQp',
-	 * 					'type' => 'text/plain',
-	 * 					'error' => 0,
-	 * 					'size' => 1,
-	 * 				),
-	 * 			),
-	 * 		),
-	 * 	),
-	 * )
+	 * 					'type'     => 'text/plain',
+	 * 					'error'    => 0,
+	 * 					'size'     => 1,
+	 * 				],
+	 * 			],
+	 * 		],
+	 * 	],
+	 * ]
 	 * ```
 	 * 
 	 * Вызов метода:
 	 * ```
-	 * $files = FilesUtils::getSanitizedArray(array('div', 'subdiv', 'file'));
+	 * $files = FilesUtils::getSanitizedArray('div', 'subdiv', 'file'));
 	 * ```
 	 * 
 	 * @param  array $fromKeysList
