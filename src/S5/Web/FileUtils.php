@@ -147,7 +147,7 @@ class FilesUtils {
 	 * 
 	 * С его помощью пишем так:
 	 * ```
-	 * $files = FilesUtils::getData(['div', 'subdiv', 'file']);
+	 * $files = FilesUtils::getFilesDataList(['div', 'subdiv', 'file']);
 	 * $files[0]['name']; //1.txt
 	 * $files[0]['type']; //text/plain
 	 * 
@@ -157,7 +157,7 @@ class FilesUtils {
 	 * }
 	 * ```
 	 */
-	public static function getData (array $fromKeysList): array {
+	public static function getFilesDataList (array $fromKeysList): array {
 		$data = [];
 		array_splice($fromKeysList, 1, 0, '');
 		foreach (static::$_fileDataKeysList as $fileDataKey) {
@@ -182,7 +182,7 @@ class FilesUtils {
 	/**
 	 * Превращает требуемую часть $_FILES из патологического хлама в удобоваримую структуру.
 	 * 
-	 * Суть почти такая же как у getData(), только этот метод возвращает не одномерный список,
+	 * Суть почти такая же как у getFilesDataList(), только этот метод возвращает не одномерный список,
 	 * а оригинальную вложенную структуру, приведённую во вменяемый вид.
 	 * 
 	 * То есть, вместо этого бреда:
@@ -249,14 +249,14 @@ class FilesUtils {
 	 * 
 	 * Вызов метода:
 	 * ```
-	 * $files = FilesUtils::getSanitizedArray('div', 'subdiv', 'file'));
+	 * $files = FilesUtils::getFilesDataTree('div', 'subdiv', 'file'));
 	 * ```
 	 * 
 	 * @param  array $fromKeysList
 	 * @return array
 	 */
-	public static function getSanitizedArray ($fromKeysList) {
-		$data          = static::getData($fromKeysList);
+	public static function getFilesDataTree ($fromKeysList) {
+		$data          = static::getFilesDataList($fromKeysList);
 		$files         = [];
 		$currentTarget = &$files;
 		//Можно использовать более легко понимаемый подход с eval(),
@@ -280,5 +280,32 @@ class FilesUtils {
 		//}
 		//$evalString .= ' = $data;';
 		//eval($evalString);
+	}
+
+
+
+	/**
+	 * Выдача файла в браузер.
+	 */
+	public static function uploadFile (string $filePath) {
+		if (!is_file($filePath) or !is_readable($filePath)) {
+			throw new \Exception("Файл недоступен: $filePath");
+		}
+
+		$finfo = finfo_open(FILEINFO_MIME_TYPE);
+		header('Content-Type: ' . finfo_file($finfo, $filePath));
+		finfo_close($finfo);
+
+		header('Content-Disposition: attachment; filename='.basename($filePath));
+
+		header('Expires: 0');
+		header('Cache-Control: must-revalidate');
+		header('Pragma: public');
+
+		header('Content-Length: ' . filesize($filePath));
+
+		ob_clean();
+		flush();
+		readfile($filePath);
 	}
 }
