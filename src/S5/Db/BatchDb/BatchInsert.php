@@ -5,7 +5,7 @@ namespace S5\Db\BatchDb;
  * Пакетная вставка данных.
  *
  * ```
- * $batchInsert = new \BatchDb\BatchInsert(['table_name' => 'users']);
+ * $batchInsert = new \BatchDb\BatchInsert(['tableName' => 'users']);
  * $batchInsert->more([...]);
  * $batchInsert->more([...]);
  * $batchInsert->more([...]);
