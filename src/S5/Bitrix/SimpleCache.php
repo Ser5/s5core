@@ -23,8 +23,8 @@ namespace S5\Bitrix;
  *
  * Как выглядит этот же пример с SimpleCache:
  * ```
- * $cache = new SimpleCache($cacheTime, $cacheId, $cacheDir, ['da_tag_1', 'iblock_id_1']));
- * if ($cache->isValid()) {
+ * $cache = new SimpleCache();
+ * if ($cache->initCache($cacheTime, $cacheId, $cacheDir, ['da_tag_1', 'iblock_id_1'])) {
  *    $vars = $cache->getVars();
  * } else {
  *    $vars = getMyVars();
@@ -61,6 +61,11 @@ class SimpleCache {
 
 
 
+	public function __construct () {
+	}
+
+
+
 	/**
 	 * Инициализация кэша.
 	 *
@@ -72,23 +77,24 @@ class SimpleCache {
 	 * @param  array|false  $tagsList
 	 * @return bool
 	 */
-	public function __construct ($cacheLifeTime, $cacheId, $cacheDir = false, $tagsList = false) {
-		$this->phpCache = new \CPHPCache();
-		$this->cacheDir = $cacheDir;
-		$this->tagsList = $tagsList;
+	public function initCache ($cacheLifeTime, $cacheId, $cacheDir = false, $tagsList = false) {
+		$this->_phpCache = new \CPHPCache();
+		$this->_cacheDir = $cacheDir;
+		$this->_tagsList = $tagsList;
 		if ($cacheDir === false) {
-			$this->_isValid = $this->phpCache->InitCache($cacheLifeTime, $cacheId);
+			$return = $this->_phpCache->InitCache($cacheLifeTime, $cacheId);
 		} else {
 			//"Важно, что этот путь начинается со слеша и им не заканчивается." (c)
-			if (strpos($this->cacheDir, '/') !== 0) {
-				$this->cacheDir = '/'.$this->cacheDir;
+			if (strpos($this->_cacheDir, '/') !== 0) {
+				$this->_cacheDir = '/'.$this->_cacheDir;
 			}
-			$this->cacheDir = preg_replace('|/+$|', '', $this->cacheDir);
-			if (is_null($this->cacheDir)) {
-				throw new \Exception("Ошибка обработки cacheDir");
+			$this->_cacheDir = preg_replace('|/+$|', '', $this->_cacheDir);
+			if (is_null($this->_cacheDir)) {
+				throw new \Exception("Ошибка обработки параметра cacheDir. Результат: [$this->_cacheDir]");
 			}
-			$this->_isValid = $this->phpCache->InitCache($cacheLifeTime, $cacheId, $this->cacheDir);
+			$return = $this->_phpCache->InitCache($cacheLifeTime, $cacheId, $this->_cacheDir);
 		}
+		return $return;
 	}
 
 
@@ -103,7 +109,7 @@ class SimpleCache {
 	 * @param  mixed             $data      Готовые данные или функция, которая их вернёт
 	 * @return mixed
 	 */
-	public static function get ($cacheLifeTime, $cacheId, $cacheDir, $tagsList, $data) {
+	public static function get (int $cacheLifeTime, string $cacheId, $cacheDir, $tagsList, $data) {
 		$cache = new static();
 		if ($cacheDir === true) {
 			$cacheDir = $cacheId;
@@ -125,13 +131,13 @@ class SimpleCache {
 
 
 
-	public function getVars (): mixed {
+	public function getVars () {
 		return $this->phpCache->GetVars();
 	}
 
 
 
-	public function setVars (mixed $vars) {
+	public function setVars ($vars) {
 		global $CACHE_MANAGER;
 		$this->phpCache->StartDataCache();
 		if (is_array($this->tagsList)) {
