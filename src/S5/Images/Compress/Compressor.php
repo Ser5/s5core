@@ -7,6 +7,7 @@ class Compressor {
 	use \S5\ConstructTrait;
 
 	protected string $lockFilePath;
+	protected string $compressedMarkString = 's5compressed';
 	protected array  $defaultDirData = [];
 
 	protected File $lockFile;
@@ -16,8 +17,14 @@ class Compressor {
 
 	public function __construct (array $params) {
 		$r = $this->checkRequirements();
-		if (!$r) {
-			throw new \Exception("Система не соответствует требованиям:\n" . array_map(fn($e)=>"$e->errorMessage\n", $r->itemsHash));
+		if (!$r->isOK) {
+			$errorsString = '';
+			foreach ($r->itemsHash as $e) {
+				if (!$e->isOK) {
+					$errorsString .= "$e->errorMessage\n";
+				}
+			}
+			throw new \Exception("Система не соответствует требованиям:\n$errorsString");
 		}
 
 		$this->_copyConstructParams($params);
@@ -29,7 +36,7 @@ class Compressor {
 
 	protected function setCompressChecker () {
 		$binName = (exec('which rg') ? 'rg' : 'grep');
-		$this->compressChecker = fn($filePath)=>(bool)exec("$binName 's5compressed' '$filePath'");
+		$this->compressChecker = fn($filePath)=>(bool)exec("$binName '$this->compressedMarkString' '$filePath'");
 	}
 
 
@@ -130,7 +137,7 @@ class Compressor {
 			}
 
 			//comment
-			passthru("exiftool -q -overwrite_original_in_place -comment='s5compressed' '$fullFilePath'");
+			passthru("exiftool -q -overwrite_original_in_place -comment='$this->compressedMarkString' '$fullFilePath'");
 			echo "----------------------\n";
 		}
 	}
@@ -253,18 +260,35 @@ class Compressor {
 	public function checkRequirements (): RequirementsResult {
 		$result = new RequirementsResult();
 
-		foreach (['node', 'exiftool', 'squoosh-cli', 'cwebp', 'avif-cli'] as $name) {
-			$r = exec("which $name");
+		foreach (['node', 'exiftool', 'squoosh-cli', 'cwebp'] as $name) {
+			$r = $this->_exec("which $name");
 			if (!$r) {
-				$result->itemsHash[$name]->setInvalid("$name не установлен");
+				$result->setInvalid($name, "$name не установлен");
 			}
 		}
 
-		if ($result->itemsHash['node']->isOK and strpos($r, 'v16') !== 0) {
-			$result->itemsHash['node16']->setInvalid('node должен быть версии 16');
+		$r = $this->_exec("npx --no-install avif --version");
+		if (!preg_match('/^[\d\.]+$/', $r)) {
+			$result->setInvalid('avif', "avif не установлен");
+		}
+
+		if ($result->itemsHash['node']->isOK) {
+			$r = $this->_exec("node -v");
+			if (strpos($r, 'v16') !== 0) {
+				$result->setInvalid('node16', "node должен быть версии 16, найдена $r");
+			}
 		}
 
 		return $result;
+	}
+
+
+
+	private function _exec (string $commandString): string {
+		ob_start();
+		$r = exec($commandString);
+		ob_end_clean();
+		return $r;
 	}
 
 
