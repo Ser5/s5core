@@ -1,5 +1,5 @@
 <?
-namespace S5\Web\Upload;
+namespace S5\Web;
 
 /**
  * Работа с пхпшным массивом $_FILES.
