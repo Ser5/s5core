@@ -3,6 +3,29 @@ namespace S5\Images\Compress;
 use \S5\IO\{Directory, File};
 
 
+/**
+ * Создаёт рядом с обычными картинками соответствующие им webp и avif.
+ *
+ * ```
+ * $compressor = new Compressor([
+ *    'lock_file_path'         => '/path/to/lock/file.lock',
+ *    'compressed_mark_string' => 'optional_custom_mark',
+ *    'default_dir_data' => [
+ *       'path'    => '/var/www/site.com/images/',
+ *       'subdirs' => [
+ *          'optional',
+ *          'subdirs',
+ *          'list',
+ *          'folders',
+ *          'elements',
+ *          'etc',
+ *       ],
+ *    ],
+ * ]);
+ *
+ * $compressor->processDefaultDirectoriesList();
+ * ```
+ */
 class Compressor {
 	use \S5\ConstructTrait;
 
@@ -34,6 +57,9 @@ class Compressor {
 
 
 
+	/**
+	 * Определяет, через что искать комментарий с признаком обработанности картинки - через grep или rg.
+	 */
 	protected function setCompressChecker () {
 		$binName = (exec('which rg') ? 'rg' : 'grep');
 		$this->compressChecker = fn($filePath)=>(bool)exec("$binName '$this->compressedMarkString' '$filePath'");
@@ -41,6 +67,9 @@ class Compressor {
 
 
 
+	/**
+	 * Обработка директорий, указанных в конструкторе.
+	 */
 	public function processDefaultDirectoriesList () {
 		if (!$this->lock()) {
 			return;
@@ -64,6 +93,9 @@ class Compressor {
 
 
 
+	/**
+	 * Обработка списка директорий.
+	 */
 	public function processDirectoriesList (string $dirPath, array $subdirNamesList) {
 		if (!$this->lock()) {
 			return;
@@ -78,6 +110,9 @@ class Compressor {
 
 
 
+	/**
+	 * Обработка одной директории.
+	 */
 	public function processDirectory (string $dirPath) {
 		if (!$this->isSkipLock and !$this->lock()) {
 			return;
