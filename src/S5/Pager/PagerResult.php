@@ -15,21 +15,21 @@ class PagerResult {
 
 	protected array $pagesList;
 
-	protected Page  $first;
-	protected Page  $rew;
-	protected Page  $prev;
+	protected ?Page $first;
+	protected ?Page $rew;
+	protected ?Page $prev;
 	protected array $sequence;
-	protected Page  $next;
-	protected Page  $ff;
-	protected Page  $last;
+	protected ?Page $next;
+	protected ?Page $ff;
+	protected ?Page $last;
 
 	public function __construct (
 		int $itemsAmount,
-		$originalPageNumber,
+		int $originalPageNumber,
 		int $pageNumber,
-		int $itemsFrom, int $itemsTo,
+		int $itemsFrom,   int $itemsTo,
 		int $pagesAmount, int $pagesWindowWidth,
-		Page $first, Page $rew, Page $prev, array $sequence, Page $next, Page $ff, Page $last
+		?Page $first, ?Page $rew, ?Page $prev, array $sequence, ?Page $next, ?Page $ff, ?Page $last
 	) {
 		$this->originalPageNumber = $originalPageNumber;
 		$this->pageNumber         = $pageNumber;
