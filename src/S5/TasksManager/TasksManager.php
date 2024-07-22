@@ -89,10 +89,11 @@ class TasksManager {
 		$progress = fn() => v::intVal()->min(0)->max(100);
 
 		$this->createValidator = (new v())
-			->key('type_id',  $min1())
-			->key('state_id', $min1(),     false)
-			->key('progress', $progress(), false)
-			->key('params',   $string(),   false)
+			->key('type_id',   $min1(),     false)
+			->key('type_code', $string1(),  false)
+			->key('state_id',  $min1(),     false)
+			->key('progress',  $progress(), false)
+			->key('params',    $string(),   false)
 		;
 
 		$this->editValidator = (new v())
@@ -155,24 +156,41 @@ class TasksManager {
 	 * Добавление задания в очередь.
 	 *
 	 * @param array{
-	 *    type_id:   int,
-	 *    state_id?: int,
-	 *    progress?: int,
-	 *    params?:   string,
+	 *    type_id?:   int,
+	 *    type_code?: string,
+	 *    state_id?:  int,
+	 *    progress?:  int,
+	 *    params?:    string,
 	 * } $data
 	 * @return int
 	 */
 	public function create (array $data): int {
+		if (!($data['type_id'] xor $data['type_code'])) {
+			throw new \InvalidArgumentException("type_id и type_code - должен быть передан один из них");
+		}
 		$this->assert($data, $this->createValidator);
+
+		//Тип задачи может быть передан в type_id или type_code
+		$typeId = $data['type_id'];
+		if ($data['type_code']) {
+			$typeCode = $this->dbAdapter->escape($data['type_code']);
+			$type     = $this->dbAdapter->getObject("SELECT id FROM $this->taskTypes WHERE code = '$typeCode'");
+			if (!$type) {
+				throw new \InvalidArgumentException("Не найден тип по коду \"$data[type_code]\"");
+			}
+			$typeId = $type->id;
+		}
 		$dateTimeString = $this->getDateTimeString();
-		$data += [
-			'state_id'   => static::NEW,
-			'progress'   => 0,
-			'params'     => '',
+		$insertData = [
+			'type_id'    => $typeId,
+			'state_id'   => $data['state_id'] ?? static::NEW,
+			'progress'   => $data['progress'] ?? 0,
+			'params'     => $data['params']   ?? '',
 			'created_at' => $dateTimeString,
 			'updated_at' => $dateTimeString,
 		];
-		$this->dbAdapter->query($this->dbUtils->getInsert($this->tasksQueue, $data));
+
+		$this->dbAdapter->query($this->dbUtils->getInsert($this->tasksQueue, $insertData));
 		return $this->dbAdapter->getInsertId();
 	}
 
