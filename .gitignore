@@ -13,6 +13,7 @@ composer.lock
 /tests/S5/Assets/**/min/
 /tests/S5/Assets/Assetic/files/db.php
 /tests/S5/TasksManager/files/
+/tests/S5/Xtrabackup/files/
 
 /demos/tasks_viewer/assets/
 /demos/tasks_viewer/bg_workers/file/db.php
