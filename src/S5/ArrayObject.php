@@ -1,20 +1,22 @@
 <?
 namespace S5;
 
+
+
 class ArrayObject extends \ArrayObject implements \ArrayAccess {
-	public function offsetExists($offset): bool {
+	public function offsetExists ($offset): bool {
 		return parent::offsetExists($offset);
 	}
 
-	public function offsetGet($offset) {
+	public function offsetGet (mixed $offset): mixed {
 		return parent::offsetGet($offset);
 	}
 
-	public function offsetSet($offset, $value) {
+	public function offsetSet (mixed $offset, mixed $value): void {
 		parent::offsetSet($offset, $value);
 	}
 
-	public function offsetUnset($offset) {
+	public function offsetUnset (mixed $offset): void {
 		parent::offsetUnset($offset);
 	}
 }
