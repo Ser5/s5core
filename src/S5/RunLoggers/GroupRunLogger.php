@@ -1,16 +1,21 @@
 <?
 namespace S5\RunLoggers;
 
-class GroupRunLogger extends BaseRunLogger {
-	protected $loggersList;
 
-	public function __construct (array $loggersList = []) {
+
+class GroupRunLogger extends BaseRunLogger {
+	/**
+	 * @param IRunLogger[] $loggersList
+	 */
+	public function __construct (
+		protected array $loggersList = []
+	) {
 		$this->loggersList = $loggersList;
 	}
 
 
 
-	public function get ($message, $type = false, $level = false) {
+	public function get (string $message, string|false $type = false, string|int|false $level = false): mixed {
 		$dataList = [];
 		foreach ($this->loggersList as $logger) {
 			$dataList[] = $logger->get($message, $type, $level);
@@ -20,7 +25,7 @@ class GroupRunLogger extends BaseRunLogger {
 
 
 
-	public function log ($message, $type = false, $level = false) {
+	public function log (string $message, string|false $type = false, string|int|false $level = false) {
 		foreach ($this->loggersList as $logger) {
 			$logger->log($message, $type, $level);
 		}
@@ -28,9 +33,9 @@ class GroupRunLogger extends BaseRunLogger {
 
 
 
-	public function group ($message = false, $type = false, $level = false) {
+	public function group (string|false $message = false, string|false $type = false, \Closure|false $callback = false) {
 		foreach ($this->loggersList as $logger) {
-			$logger->group($message, $type, $level);
+			$logger->group($message, $type, $callback);
 		}
 	}
 
@@ -46,7 +51,7 @@ class GroupRunLogger extends BaseRunLogger {
 		$this->loggersList[] = $logger;
 	}
 
-	public function getLogger ($key) {
-		return $this->loggersList[$key] ?? null;
+	public function getLogger (int $index) {
+		return $this->loggersList[$index] ?? null;
 	}
 }

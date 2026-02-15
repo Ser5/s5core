@@ -33,37 +33,24 @@ interface IRunLogger {
 	 * $runLogger->log('Сообщенька уровнем глубже',   '+1');
 	 * $runLogger->log('Сообщенька вровень выпирает', '-1');
 	 * ```
-	 *
-	 * @param  string           $message
-	 * @param  string|false     $type
-	 * @param  string|int|false $level
-	 * @return mixed
 	 */
-	function get ($message, $type = false, $level = false);
+	function get (string $message, string|false $type = false, string|int|false $level = false): mixed;
 
 	/**
 	 * Пишет лог с данными, возвращёнными get().
-	 *
-	 * @param string           $message
-	 * @param string|false     $type
-	 * @param string|int|false $level
 	 */
-	function log ($message, $type = false, $level = false);
+	function log (string $message, string|false $type = false, string|int|false $level = false);
 
 
 
-	function ok      (string $message, $level = false);
-	function error   (string $message, $level = false);
-	function warning (string $message, $level = false);
-	function info    (string $message, $level = false);
+	function ok      (string $message, string|int|false $level = false);
+	function error   (string $message, string|int|false $level = false);
+	function warning (string $message, string|int|false $level = false);
+	function info    (string $message, string|int|false $level = false);
 
 
 
-	/**
-	 * @param string|false $message
-	 * @param string|false $type
-	 */
-	function group ($message = false, $type = false);
+	function group (string|false $message = false, string|false $type = false, \Closure|false $callback = false);
 
 	function groupEnd ();
 }

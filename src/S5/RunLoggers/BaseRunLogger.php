@@ -8,30 +8,35 @@ abstract class BaseRunLogger implements IRunLogger {
 	const ERROR   = 'error';
 	const CLOSE   = 'close';
 
-	protected $level = 1;
-
-	abstract public function get ($message, $type = false, $level = false);
+	protected int $level = 1;
 
 
 
-	public function log ($message, $type = false, $level = false) {
+	public function log (string $message, string|false $type = false, string|int|false $level = false) {
 		echo $this->get($message, $type, $level);
 	}
 
 
 
-	public function ok      (string $message, $level = false) { $this->log($message, 'ok',      $level); }
-	public function error   (string $message, $level = false) { $this->log($message, 'error',   $level); }
-	public function warning (string $message, $level = false) { $this->log($message, 'warning', $level); }
-	public function info    (string $message, $level = false) { $this->log($message, 'info',    $level); }
+	public function ok      (string $message, string|int|false $level = false) { $this->log($message, 'ok',      $level); }
+	public function error   (string $message, string|int|false $level = false) { $this->log($message, 'error',   $level); }
+	public function warning (string $message, string|int|false $level = false) { $this->log($message, 'warning', $level); }
+	public function info    (string $message, string|int|false $level = false) { $this->log($message, 'info',    $level); }
 
 
 
-	public function group ($message = false, $type = false) {
+	public function group (string|false $message = false, string|false $type = false, \Closure|false $callback = false) {
 		if ($message !== false) {
 			$this->log($message, $type);
 		}
 		$this->level++;
+		if ($callback) {
+			try {
+				$callback();
+			} finally {
+				$this->groupEnd();
+			}
+		}
 	}
 
 	public function groupEnd () {
@@ -40,7 +45,7 @@ abstract class BaseRunLogger implements IRunLogger {
 		}
 	}
 
-	protected function calcAbsLevel ($level) {
+	protected function calcAbsLevel (string|int|false $level): int {
 		$matches = [];
 		if (!$level) {
 			$level = $this->level;

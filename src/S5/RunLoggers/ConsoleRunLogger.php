@@ -8,7 +8,7 @@ class ConsoleRunLogger extends BaseRunLogger {
 	protected static string $error   = "\033[0;31m";
 	protected static string $close   = "\033[0m";
 
-	public function get ($message, $type = false, $level = false) {
+	public function get (string $message, string|false $type = false, string|int|false $level = false): mixed {
 		if ($type and isset(static::$$type)) {
 			$message = static::$$type . $message . static::$close;
 		}

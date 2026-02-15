@@ -69,13 +69,14 @@ class RunLoggersTest extends \S5\TestCase {
 
 		$this->assertEquals("test\n", $this->_getLog($rl, 'log', 'test'));
 
+		/** @disregard */
 		$this->assertEquals([$expected1], $rl->getLogger(2)->getOutputList());
 	}
 
 
 
 	public function testFactory () {
-		$f = new RunLoggersFactory(['loggers' => [
+		$f = new RunLoggersFactory(['loggersHash' => [
 			'empty'   => '\S5\RunLoggers\EmptyRunLogger',
 			''        => '\S5\RunLoggers\EmptyRunLogger',
 			'console' => '\S5\RunLoggers\ConsoleRunLogger',
@@ -91,6 +92,7 @@ class RunLoggersTest extends \S5\TestCase {
 		$this->assertInstanceOf(ConsoleRunLogger::class, $f->get(1));
 		$this->assertInstanceOf(ConsoleRunLogger::class, $f->get(true));
 
+		/** @var GroupRunLogger */
 		$groupRunLogger = $f->get('group');
 		$this->assertInstanceOf(GroupRunLogger::class,   $groupRunLogger);
 		$this->assertInstanceOf(ConsoleRunLogger::class, $groupRunLogger->getLogger(0));

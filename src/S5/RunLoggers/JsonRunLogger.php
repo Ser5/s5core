@@ -2,7 +2,7 @@
 namespace S5\RunLoggers;
 
 class JsonRunLogger extends BaseRunLogger {
-	public function get ($message, $type = false, $level = false) {
+	public function get (string $message, string|false $type = false, string|int|false $level = false): mixed {
 		return json_encode([
 			'message' => $message,
 			'type'    => $type,

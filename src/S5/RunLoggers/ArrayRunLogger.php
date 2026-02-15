@@ -5,7 +5,7 @@ class ArrayRunLogger extends BaseRunLogger {
 	protected array $outputList = [];
 
 
-	public function get ($message, $type = false, $level = false) {
+	public function get (string $message, string|false $type = false, string|int|false $level = false): mixed {
 		return [
 			'message' => $message,
 			'type'    => $type,
@@ -15,7 +15,7 @@ class ArrayRunLogger extends BaseRunLogger {
 
 
 
-	public function log ($message, $type = false, $level = false) {
+	public function log (string $message, string|false $type = false, string|int|false $level = false) {
 		$this->outputList[] = $this->get($message, $type, $level);
 	}
 
