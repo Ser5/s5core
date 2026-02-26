@@ -9,6 +9,4 @@ class Factory {
 		if (isset($params['directory'])) $this->directoryClass = $params['directory_class'];
 		if (isset($params['file']))      $this->directoryClass = $params['file_class'];
 	}
-
-
 }

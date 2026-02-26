@@ -6,20 +6,17 @@ namespace S5\IO;
  */
 class File extends Item {
 	/** @var resource|false */
-	private $_handle = false;
+	protected $handle = false;
 
 	/** @var bool */
-	private $_isLocked = false;
+	protected bool $isLocked = false;
 
 
 
 	/**
-	 * Constructor.
-	 *
 	 * @param string|resource $file Путь к файлу или ресурс файла
-	 * @param array|false     $params
 	 */
-	public function __construct ($file, $params = false) {
+	public function __construct (mixed $file, array $params = []) {
 		if (is_resource($file)) {
 			$resourceType = get_resource_type($file);
 			if ($resourceType != 'stream') {
@@ -27,7 +24,7 @@ class File extends Item {
 			}
 			$meta = stream_get_meta_data($file);
 			$path = $meta['uri'];
-			$this->_handle = $file;
+			$this->handle = $file;
 		} else {
 			$path = $file;
 		}
@@ -96,7 +93,7 @@ class File extends Item {
 	 *
 	 * Далее это добро можно считать через простой `$data = require $filePath`;
 	 */
-	public function putPhpReturn ($data) {
+	public function putPhpReturn (array $data) {
 		$this->putContents("<?\nreturn ".var_export($data,true).";\n");
 	}
 
@@ -108,10 +105,6 @@ class File extends Item {
 	}
 
 
-
-	public function isExists (): bool {
-		return is_file($this->getPath());
-	}
 
 	public function isFile (): bool {
 		return true;
@@ -145,8 +138,8 @@ class File extends Item {
 	 *
 	 * При перемещении отсутствующие папки создаются автоматически.
 	 */
-	public function rename ($name) {
-		return $this->renameOrCopy($name, 'rename');
+	public function rename (string $name, bool $isOverwrite = false) {
+		return $this->renameOrCopy($name, 'rename', $isOverwrite);
 	}
 
 
@@ -154,7 +147,7 @@ class File extends Item {
 	/**
 	 * Перемещение файла с сохранением имени.
 	 */
-	public function move ($dirPath) {
+	public function move (string $dirPath) {
 		$this->rename("$dirPath/");
 	}
 
@@ -174,13 +167,13 @@ class File extends Item {
 	 *
 	 * При копировании отсутствующие папки создаются автоматически.
 	 */
-	public function copy ($dest) {
-		$this->renameOrCopy($dest, 'copy');
+	public function copy (string $dest, bool $isOverwrite = false) {
+		$this->renameOrCopy($dest, 'copy', $isOverwrite);
 	}
 
 
 
-	protected function renameOrCopy ($name, $mode) {
+	protected function renameOrCopy (string $name, string $mode, bool $isOverwrite) {
 		$r       = true;
 		$newPath = '';
 
@@ -190,23 +183,29 @@ class File extends Item {
 			switch ($type) {
 				//Переименование/копирование в эту же папку с другим названием файла
 				case 'simple_file':
-					if ($this->getName() != $name) {
-						$dir     = $this->getDirectory();
-						$newPath = "$dir/$name";
-						$r       = $functionName($this->getPath(), $newPath);
+					if ($this->getName() == $name) {
+						throw new \InvalidArgumentException("Новое название файла совпадает с текущим: $name");
 					}
+					$dir     = $this->getDirectory();
+					$newPath = "$dir/$name";
+					if (file_exists($newPath) and !$isOverwrite) {
+						throw new \InvalidArgumentException("Такой файл уже существует: $newPath");
+					}
+					$r = $functionName($this->getPath(), $newPath);
 				break;
 				//Переименование/копирование в другую папку с новым названием файла
 				case 'complex_file':
 					$newPath    = $name;
 					$targetFile = new File($newPath);
-					if ($this->getPath() != $targetFile->getPath()) {
-						$targetDir = new Directory(dirname($newPath));
-						if (!$targetDir->isExists()) {
-							$targetDir->create();
-						}
-						$r = $functionName($this->getPath(), $newPath);
+					if ($this->getPath() == $targetFile->getPath()) {
+						throw new \InvalidArgumentException("Новый путь совпадает с текущим: $newPath");
 					}
+					if (file_exists($newPath) and !$isOverwrite) {
+						throw new \InvalidArgumentException("Такой файл уже существует: $newPath");
+					}
+					$targetDir = new Directory(dirname($newPath));
+					$targetDir->tryCreate();
+					$r = $functionName($this->getPath(), $newPath);
 				break;
 				//Перемещение/копирование в другую папку с сохранением названия файла
 				case 'simple_dir':
@@ -214,10 +213,11 @@ class File extends Item {
 					$thisDir   = $this->getDirectory(); //Получаем объекты директорий,
 					$targetDir = new Directory($name);  //чтобы сравнивать нормализованные пути
 					if ($thisDir->getPath() != $targetDir->getPath()) {
-						if (!$targetDir->isExists()) {
-							$targetDir->create();
-						}
+						$targetDir->tryCreate();
 						$newPath = $name . $this->getName();
+						if (file_exists($newPath) and !$isOverwrite) {
+							throw new \InvalidArgumentException("Такой файл уже существует: $newPath");
+						}
 						$r = $functionName($this->getPath(), $newPath);
 					}
 				break;
@@ -237,26 +237,25 @@ class File extends Item {
 
 
 	/**
-	 * @param  string $openMode
 	 * @return resource
 	 */
-	public function open ($openMode) {
-		if ($this->_handle === false) {
+	public function open (string $openMode) {
+		if ($this->handle === false) {
 			$this->_createDir();
-			$this->_handle = fopen($this->getPath(), $openMode);
-			if (!$this->_handle) {
+			$this->handle = fopen($this->getPath(), $openMode);
+			if (!$this->handle) {
 				throw new \Exception("Не удалось открыть файл ".$this->getPath());
 			}
 		}
-		return $this->_handle;
+		return $this->handle;
 	}
 
 
 
 	public function close () {
-		if ($this->_handle !== false and is_resource($this->_handle)) {
-			fclose($this->_handle);
-			$this->_handle = false;
+		if ($this->handle !== false and is_resource($this->handle)) {
+			fclose($this->handle);
+			$this->handle = false;
 		}
 	}
 
@@ -267,13 +266,13 @@ class File extends Item {
 			$this->unlock();
 			return true;
 		}
-		if ($this->_isLocked) {
+		if ($this->isLocked) {
 			return false;
 		}
 		$this->_createDir();
 		$this->open($openMode);
-		if (flock($this->_handle, $lockOperation, $wouldBlock)) {
-			$this->_isLocked = true;
+		if (flock($this->handle, $lockOperation, $wouldBlock)) {
+			$this->isLocked = true;
 			return true;
 		} else {
 			return false;
@@ -283,19 +282,20 @@ class File extends Item {
 
 
 	public function unlock () {
-		if (!$this->_isLocked) {
+		if (!$this->isLocked) {
 			return;
 		}
-		if (!flock($this->_handle, LOCK_UN)) {
+		if (!flock($this->handle, LOCK_UN)) {
 			throw new \Exception("Не удалось разблокировать файл ".$this->getPath());
 		}
-		$this->_isLocked = false;
+		$this->close();
+		$this->isLocked = false;
 	}
 
 
 
 	public function isLocked (): bool {
-		return $this->_isLocked;
+		return $this->isLocked;
 	}
 
 

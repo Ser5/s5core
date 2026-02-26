@@ -1,7 +1,7 @@
 <?
 namespace S5\IO;
 
-abstract class Item implements IStringablePath {
+abstract class Item {
 	protected string $path;
 
 	protected array $params = [
@@ -10,32 +10,18 @@ abstract class Item implements IStringablePath {
 
 
 
-	/**
-	 * Constructor.
-	 *
-	 * @param string      $path Путь к сущности
-	 * @param array|false $params
-	 */
-	protected function construct ($path, $params = false) {
+	protected function construct (string $path, array $params = []) {
 		$this->setPath($path);
 		$this->setParams($params);
 	}
 
-	/**
-	 * @param array|false $params
-	 */
-	protected function setParams ($params) {
-		if (is_array($params)) {
-			$this->params = array_merge($this->params, $params);
-		}
+	protected function setParams (array $params) {
+		$this->params = array_merge($this->params, $params);
 	}
 
 
 
-	/**
-	 * @param string $path
-	 */
-	protected function setPath ($path) {
+	protected function setPath (string $path) {
 		if (preg_match('/[+*?]/', $path)) {
 			throw new \InvalidArgumentException("Путь содержит недопустимые символы: [$path]");
 		}
@@ -64,7 +50,9 @@ abstract class Item implements IStringablePath {
 
 
 
-	public abstract function isExists (): bool;
+	public function isExists (): bool {
+		return file_exists($this->getPath());
+	}
 
 	public abstract function isFile (): bool;
 
@@ -110,6 +98,25 @@ abstract class Item implements IStringablePath {
 
 
 
+	public function setTime (int|string|null $mtime = null, int|string|null $atime = null): bool {
+		if (file_exists($this->path)) {
+			static $varNamesList = ['mtime', 'atime'];
+			foreach ($varNamesList as $varName) {
+				if (is_string($$varName) and !ctype_digit("$$varName")) {
+					$$varName = strtotime($$varName);
+					if (!$$varName) {
+						throw new \InvalidArgumentException("Неверный $varName: {$$varName}");
+					}
+				}
+			}
+			return touch($this->path, $mtime, $atime);
+		} else {
+			return false;
+		}
+	}
+
+
+
 	public function getMtimeDiff ($file): int {
 		$thisMtimeTs = (int)$this->getMtime();
 		$fileMtimeTs = ($file instanceof Item) ? (int)$file->getMtime() : (int)filemtime($file);
@@ -148,12 +155,8 @@ abstract class Item implements IStringablePath {
 	 * Возвращает новый объект файла.
 	 *
 	 * Можно переопределять в наследниках, если нужно инициализировать объект другого класса.
-	 *
-	 * @param  string      $path
-	 * @param  array|false $params
-	 * @return File
 	 */
-	protected function initFile ($path, $params = false) {
+	protected function initFile (string $path, $params = []): File {
 		return new File($path, $params);
 	}
 
@@ -161,12 +164,8 @@ abstract class Item implements IStringablePath {
 	 * Возвращает новый объект директории.
 	 *
 	 * Можно переопределять в наследниках, если нужно инициализировать объект другого класса.
-	 *
-	 * @param  string      $path
-	 * @param  array|false $params
-	 * @return Directory
 	 */
-	protected function initDirectory (string $path, $params = false) {
+	protected function initDirectory (string $path, $params = []): Directory {
 		return new Directory($path, $params);
 	}
 
@@ -176,12 +175,8 @@ abstract class Item implements IStringablePath {
 	 * Можно переопределять в наследниках, если нужно инициализировать объекты других классов.
 	 * Файл/директория должны существовать - иначе определять будет не по чему.
 	 * Если это не файл и не папка - возвращает файл, для простоты.
-	 *
-	 * @param  string      $path
-	 * @param  array|false $params
-	 * @return Item
 	 */
-	protected function initItem ($path, $params = false) {
+	protected function initItem (string $path, $params = []): Item {
 		if (!file_exists($path)) {
 			throw new \Exception("Путь не существует: $path");
 		}

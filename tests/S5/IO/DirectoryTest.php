@@ -12,10 +12,10 @@ class DirectoryTest extends TestCase {
 	public function setUp (): void {
 		parent::setUp();
 
-		if (!mkdir($this->testDirPath.'/1',   null, true)) $this->fail('failed');
-		if (!mkdir($this->testDirPath.'/1/a', null, true)) $this->fail('failed');
-		if (!mkdir($this->testDirPath.'/1/b', null, true)) $this->fail('failed');
-		if (!mkdir($this->testDirPath.'/1/c', null, true)) $this->fail('failed');
+		if (!mkdir($this->testDirPath.'/1',   0777, true))          $this->fail('failed');
+		if (!mkdir($this->testDirPath.'/1/a', 0777, true))          $this->fail('failed');
+		if (!mkdir($this->testDirPath.'/1/b', 0777, true))          $this->fail('failed');
+		if (!mkdir($this->testDirPath.'/1/c', 0777, true))          $this->fail('failed');
 		if (!file_put_contents($this->testDirPath.'/1/1.txt', '1')) $this->fail('failed');
 		if (!file_put_contents($this->testDirPath.'/1/2.txt', '1')) $this->fail('failed');
 		if (!file_put_contents($this->testDirPath.'/1/3.txt', '1')) $this->fail('failed');
@@ -144,6 +144,44 @@ class DirectoryTest extends TestCase {
 
 
 
+	public function testCopy () {
+		$sourceDir = new Directory($this->testDirPath.'source/');
+		$sourceDir->create();
+
+		$targetDir = new Directory($this->testDirPath.'target/');
+
+		//Копирование с совпадающим путём
+		$this->assertException(fn() => $sourceDir->copy($sourceDir));
+
+		$copy = function (bool $isOverwrite) use ($sourceDir, $targetDir) {
+			foreach ([$sourceDir, $sourceDir.'subdir1/', $sourceDir.'subdir2/'] as $dirPath) {
+				(new Directory($dirPath.'subdir1/'))->create();
+				(new Directory($dirPath.'subdir2/'))->create();
+				file_put_contents($dirPath.'file1.txt', '');
+				file_put_contents($dirPath.'file2.txt', '');
+			}
+
+			$sourceDir->copy($targetDir, $isOverwrite);
+
+			foreach ([$targetDir, $targetDir.'subdir1/', $targetDir.'subdir2/'] as $dirPath) {
+				$this->assertDirectoryExists((string)$dirPath);
+				$this->assertDirectoryExists($dirPath.'subdir1/');
+				$this->assertDirectoryExists($dirPath.'subdir2/');
+				$this->assertFileExists($dirPath.'file1.txt');
+				$this->assertFileExists($dirPath.'file2.txt');
+			}
+		};
+
+		//Нормальное копирование
+		$copy(false);
+		//Копирование в существующую папку
+		$this->assertException(fn() => $copy(false));
+		//Копирование в существующую папку с перезаписью
+		$copy(true);
+	}
+
+
+
 	public function testClear () {
 		$d = new Directory($this->testDirPath.'/1/');
 		$d->clear();
@@ -164,8 +202,8 @@ class DirectoryTest extends TestCase {
 
 
 	public function testGetItemsList () {
-		mkdir($this->testDirPath.'/2', null, true);
-		mkdir($this->testDirPath.'/3', null, true);
+		mkdir($this->testDirPath.'/2', 0777, true);
+		mkdir($this->testDirPath.'/3', 0777, true);
 
 		file_put_contents($this->testDirPath.'/1.txt', '1');
 		file_put_contents($this->testDirPath.'/2.txt', '1');

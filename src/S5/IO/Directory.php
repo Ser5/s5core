@@ -5,33 +5,19 @@ namespace S5\IO;
  * @phpstan-consistent-constructor
  */
 class Directory extends Item {
-	/**
-	 * Constructor.
-	 *
-	 * @param string      $path Путь к директории
-	 * @param array|false $params
-	 */
-	public function __construct ($path, $params = false) {
+	public function __construct (string $path, array $params = []) {
 		parent::construct($path, $params);
 	}
 
 
 
-	/**
-	 * @param string $path
-	 */
-	protected function setPath ($path) {
+	protected function setPath (string $path) {
 		parent::setPath("$path/");
 	}
 
 
 
-	/**
-	 * @param  string|false $dirPath
-	 * @param  string       $prefix
-	 * @return Directory
-	 */
-	public static function initTemp ($dirPath = false, string $prefix = '') {
+	public static function initTemp (string|false $dirPath = false, string $prefix = ''): Directory {
 		if (!$dirPath) {
 			$dirPath = sys_get_temp_dir();
 		}
@@ -46,10 +32,6 @@ class Directory extends Item {
 	}
 
 
-
-	public function isExists (): bool {
-		return is_dir($this->getPath());
-	}
 
 	public function isFile (): bool {
 		return false;
@@ -78,17 +60,21 @@ class Directory extends Item {
 
 
 
-	/**
-	 * @param  string|false $name
-	 * @param  bool|false   $isOverwrite
-	 * @return bool
-	 */
-	public function rename ($name, $isOverwrite = false) {
-		$currentPath = $this->getPath();
+	public function tryCreate (): bool {
+		if (!$this->isExists()) {
+			return $this->create();
+		}
+		return false;
+	}
 
+
+
+	public function rename (string $name, $isOverwrite = false): bool {
 		if (!$this->isExists()) {
 			return false;
 		}
+
+		$currentPath = $this->getPath();
 
 		$name = new Path($name);
 
@@ -113,6 +99,49 @@ class Directory extends Item {
 
 		$this->setPath((string)(new Path($newPath)));
 		return true;
+	}
+
+
+
+	public function copy (string $pathString, bool $isOverwrite = false) {
+		$targetDir = new static($pathString);
+
+		if ($this->getPath() == $targetDir->getPath()) {
+			throw new \InvalidArgumentException("Новый путь совпадает с текущим: $pathString");
+		}
+
+		$copy = function (Directory $sourceDir, Directory $targetDir) use (&$copy, $isOverwrite) {
+			if (!$targetDir->isExists()) {
+				$targetDir->create();
+			} else {
+				if (!$targetDir->isWritable()) {
+					throw new \Exception("Папка недоступна для записи: $targetDir");
+				}
+			}
+			$itemsList = $sourceDir->getItemsList();
+			/** @var array<int, Directory[]> */
+			$nestedDirsList = [];
+			foreach ($itemsList as $item) {
+				if ($item->isFile()) {
+					/** @var File $item */
+					$item->copy($targetDir, $isOverwrite);
+				}
+			}
+			foreach ($itemsList as $item) {
+				if ($item->isDirectory()) {
+					/** @var Directory $item */
+					$sourceNestedDir = new static($sourceDir . $item->getName());
+					$targetNestedDir = new static($targetDir . $item->getName());
+					$targetNestedDir->tryCreate();
+					$nestedDirsList[] = [$sourceNestedDir, $targetNestedDir];
+				}
+			}
+			foreach ($nestedDirsList as $e) {
+				$copy($e[0], $e[1]);
+			}
+		};
+
+		$copy($this, $targetDir);
 	}
 
 
@@ -168,10 +197,9 @@ class Directory extends Item {
 	/**
 	 * Первая найденная папка или файл - или null, если ничего не найдено.
 	 *
-	 * @param  string|false $type   'd', 'f', false
-	 * @return Item|null
+	 * @param $type   'd', 'f', false
 	 */
-	public function getFirstItem ($type = false) {
+	public function getFirstItem (string|false $type = false): ?Item {
 		$firstItem = null;
 		$dh        = $this->_open();
 
@@ -255,6 +283,7 @@ class Directory extends Item {
 
 
 
+	/** @return resource Результат opendir() */
 	private function _open () {
 		if (!$dh = opendir($this->getPath())) {
 			throw new \Exception("Папка не существует: $this");

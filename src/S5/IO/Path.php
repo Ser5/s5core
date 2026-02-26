@@ -1,16 +1,16 @@
 <?
 namespace S5\IO;
 
-class Path implements IStringablePath {
+class Path {
 	protected string $pathString;
 
-	public function __construct ($pathString) {
+	public function __construct (string $pathString) {
 		$this->pathString = $this->normalizePathString($pathString);
 	}
 
 
 
-	protected function normalizePathString ($pathString) {
+	protected function normalizePathString (string $pathString) {
 		$pathString         = str_replace('\\',       '/', $pathString);
 		$pathString         = preg_replace('|/{2,}|', '/', $pathString);
 		$pathPartsList      = explode('/', $pathString);
@@ -56,7 +56,7 @@ class Path implements IStringablePath {
 
 
 
-	public function isEndsWithSlash () {
+	public function isEndsWithSlash (): bool {
 		return preg_match('~[/\\\\]$~ui', $this->pathString);
 	}
 

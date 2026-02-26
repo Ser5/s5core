@@ -2,15 +2,15 @@
 namespace S5\IO;
 
 class FileTest extends TestCase {
-	private $_filePath;
-	private $_fileContent = 'one two three.';
+	private string $_fileName = 'test.txt';
+	private string $_filePath;
+	private string $_fileContent = 'one two three.';
 
 
 	public function __construct (...$p) {
 		parent::__construct(...$p);
 
 		$this->setTestDirSubpath('File');
-		$this->_fileName = 'test.txt';
 		$this->_filePath = $this->testDirPath.$this->_fileName;
 	}
 
