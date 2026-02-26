@@ -1,28 +1,32 @@
 <?
 namespace S5\Web;
 
+
+
 /**
  * Работа с пхпшным массивом $_FILES.
  */
 class FilesUtils {
-	private static $_fileDataKeysList = ['name', 'tmp_name', 'type', 'error', 'size'];
+	protected static $fileDataKeysList = ['name', 'tmp_name', 'type', 'error', 'size'];
+
+
 
 	/**
 	 * Достаёт из массива $_FILES указанные данные во вменяемом виде.
-	 * 
+	 *
 	 * Допустим, у нас на форме есть несколько файловых полей типа:
 	 * ```
 	 * <input type="file" name="div[subdiv][file][]">
 	 * <input type="file" name="div[subdiv][file][]">
 	 * <input type="file" name="div[subdiv][file][]">
 	 * ```
-	 * 
+	 *
 	 * Ожидаем, что после отправки формы значения полей можно будет получить как-то так:
 	 * ```
 	 * $_FILES['div']['subdiv']['file'][0]['name']; //1.txt
 	 * $_FILES['div']['subdiv']['file'][0]['type']; //text/plain
 	 * ```
-	 * 
+	 *
 	 * А по всему списку переданных файлов пройти так:
 	 * ```
 	 * foreach ($_FILES['div']['subdiv']['file'] as $fileData) {
@@ -30,7 +34,7 @@ class FilesUtils {
 	 * 		echo $fileData['type']; //text/plain
 	 * }
 	 * ```
-	 * 
+	 *
 	 * Но не тут-то было. Пхп в этом случае производит массив дико упоротой структуры.
 	 * Если посмотреть на него, то мы увидим:
 	 * ```
@@ -84,15 +88,15 @@ class FilesUtils {
 	 * 	],
 	 * ];
 	 * ```
-	 * 
+	 *
 	 * Лучше бы этого не видеть.
-	 * 
+	 *
 	 * Код из первого примера ПХП предлагает писать так:
 	 * ```
 	 * $_FILES['div']['name']['subdiv']['file'][0]; //1.txt
 	 * $_FILES['div']['type']['subdiv']['file'][0]; //text/plain
 	 * ```
-	 * 
+	 *
 	 * Код из второго примера - так:
 	 * ```
 	 * foreach (array_keys($_FILES['div']['name']['subdiv']['file']) as $index) {
@@ -100,7 +104,7 @@ class FilesUtils {
 	 * 		echo $_FILES['div']['type']['subdiv']['file'][$index]; //text/plain
 	 * }
 	 * ```
-	 * 
+	 *
 	 * Или можно собрать свой массив с более удобным представлением данных:
 	 * ```
 	 * $files = [];
@@ -114,9 +118,9 @@ class FilesUtils {
 	 * 		echo $fileData['type']; //text/plain
 	 * }
 	 * ```
-	 * 
+	 *
 	 * Но это громоздко и нужно строчить каждый раз.
-	 * 
+	 *
 	 * Как раз для сборки такого массива для структуры любого формата и предназначен этот метод.
 	 * Что возвращает он:
 	 * ```
@@ -144,13 +148,13 @@ class FilesUtils {
 	 * 	],
 	 * ]
 	 * ```
-	 * 
+	 *
 	 * С его помощью пишем так:
 	 * ```
 	 * $files = FilesUtils::getFilesDataList(['div', 'subdiv', 'file']);
 	 * $files[0]['name']; //1.txt
 	 * $files[0]['type']; //text/plain
-	 * 
+	 *
 	 * foreach ($files as $fileData) {
 	 * 		echo $fileData['name']; //1.txt
 	 * 		echo $fileData['type']; //text/plain
@@ -160,7 +164,7 @@ class FilesUtils {
 	public static function getFilesDataList (array $fromKeysList): array {
 		$data = [];
 		array_splice($fromKeysList, 1, 0, '');
-		foreach (static::$_fileDataKeysList as $fileDataKey) {
+		foreach (static::$fileDataKeysList as $fileDataKey) {
 			$currentSource = $_FILES;
 			$fromKeysList[1] = $fileDataKey;
 			foreach ($fromKeysList as $fromKey) {
@@ -181,10 +185,10 @@ class FilesUtils {
 
 	/**
 	 * Превращает требуемую часть $_FILES из патологического хлама в удобоваримую структуру.
-	 * 
+	 *
 	 * Суть почти такая же как у getFilesDataList(), только этот метод возвращает не одномерный список,
 	 * а оригинальную вложенную структуру, приведённую во вменяемый вид.
-	 * 
+	 *
 	 * То есть, вместо этого бреда:
 	 * ```
 	 * [
@@ -227,7 +231,7 @@ class FilesUtils {
 	 * 	],
 	 * ]
 	 * ```
-	 * 
+	 *
 	 * Получаем вот так вот ожидаемо:
 	 * ```
 	 * [
@@ -246,16 +250,16 @@ class FilesUtils {
 	 * 	],
 	 * ]
 	 * ```
-	 * 
+	 *
 	 * Вызов метода:
 	 * ```
 	 * $files = FilesUtils::getFilesDataTree('div', 'subdiv', 'file'));
 	 * ```
-	 * 
+	 *
 	 * @param  array $fromKeysList
 	 * @return array
 	 */
-	public static function getFilesDataTree ($fromKeysList) {
+	public static function getFilesDataTree (array $fromKeysList): array {
 		$data          = static::getFilesDataList($fromKeysList);
 		$files         = [];
 		$currentTarget = &$files;
@@ -263,7 +267,7 @@ class FilesUtils {
 		//но с ним работает в 15 раз медленнее.
 		//Замеры времени:
 		//float(0.12437701225281)
-		//float(1.8892729282379)		
+		//float(1.8892729282379)
 		foreach ($fromKeysList as $chainKey) {
 			if (!isset($currentTarget[$chainKey])) {
 				$currentTarget[$chainKey] = [];
