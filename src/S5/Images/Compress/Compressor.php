@@ -79,7 +79,7 @@ class Compressor {
 			throw new \Exception("Не указан путь к папке по умолчанию");
 		}
 		if (!is_dir($this->defaultDirData['path'])) {
-			throw new \Exception("Указанная папка по умолчанию не существует: [$this->defaultDirData[path]]");
+			throw new \Exception("Указанная папка по умолчанию не существует: [{$this->defaultDirData['path']}]");
 		}
 
 		$this->isSkipLock = true;
