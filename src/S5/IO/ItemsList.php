@@ -62,7 +62,7 @@ class ItemsList extends \S5\ArrayObject {
 		if (is_string($filter)) {
 			$filter = fn($item) => preg_match($filter, $item->getName());
 		}
-		$this->exchangeArray(array_filter((array)$this, $filter));
+		$this->exchangeArray(array_values(array_filter((array)$this, $filter)));
 		return $this;
 	}
 
