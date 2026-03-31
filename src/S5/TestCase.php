@@ -1,9 +1,15 @@
 <?
 namespace S5;
+
 use S5\IO\Directory;
 
 
+
 class TestCase extends \PHPUnit\Framework\TestCase {
+	protected Directory $filesDir;
+
+
+
 	public function assertException ($func, string $failText = 'Failed') {
 		try {
 			$func();
@@ -11,6 +17,12 @@ class TestCase extends \PHPUnit\Framework\TestCase {
 		} catch (\Throwable $e) {
 			$this->assertTrue(true); //Чтобы PHPUnit не пищал про Risky tests
 		}
+	}
+
+
+
+	protected function deleteTestFiles () {
+		$this->filesDir->delete();
 	}
 
 
