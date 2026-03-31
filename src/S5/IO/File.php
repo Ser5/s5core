@@ -1,6 +1,8 @@
 <?
 namespace S5\IO;
 
+
+
 /**
  * @phpstan-consistent-constructor
  */
@@ -232,6 +234,15 @@ class File extends Item {
 		if ($mode == 'rename' and $newPath) {
 			$this->setPath($newPath);
 		}
+	}
+
+
+	public function chown (string|int $user = '', string|int $group = '') {
+		parent::baseChown($user, $group, false);
+	}
+
+	public function chmod (string|int $mode) {
+		parent::baseChmod($mode, false);
 	}
 
 

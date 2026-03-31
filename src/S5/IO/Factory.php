@@ -1,6 +1,8 @@
 <?
 namespace S5\IO;
 
+
+
 class Factory {
 	protected $directoryClass = '\S5\IO\Directory';
 	protected $fileClass      = '\S5\IO\File';

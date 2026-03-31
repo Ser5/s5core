@@ -1,6 +1,11 @@
 <?
 namespace S5\IO;
 
+use S5\IO\Permissions\Permissions;
+use S5\System;
+
+
+
 abstract class Item {
 	protected string $path;
 
@@ -58,6 +63,10 @@ abstract class Item {
 
 	public abstract function isDirectory (): bool;
 
+	public function isSymlink () {
+		return is_link($this);
+	}
+
 	public function isReadable (): bool {
 		return is_readable($this->path);
 	}
@@ -69,6 +78,84 @@ abstract class Item {
 
 
 	public abstract function delete ();
+
+
+
+	protected function baseChown (string|int $user = '', string|int $group = '', bool $isRecursive = false) {
+		if (!$isRecursive) {
+			if ($user)  chown($this, $user);
+			if ($group) chgrp($this, $group);
+		} else {
+			if ($user and $group) {
+				$userGroupString = "$user:$group";
+				$recursiveFlag   = (!$isRecursive ? '' : '-R');
+				System::exec("chown $recursiveFlag $userGroupString '$this'");
+			}
+		}
+	}
+
+	protected function baseChmod (string|int $mode, bool $isRecursive) {
+		if (!$isRecursive and is_numeric($mode)) {
+			chmod($this, $mode);
+		} else {
+			$recursiveFlag = (!$isRecursive ? '' : '-R');
+			System::exec("chmod $recursiveFlag $mode '$this'");
+		}
+	}
+
+
+
+	/**
+	 * Возвращает восьмеричное значение прав доступа, типа 0777, 0755 итп.
+	 */
+	public function getPermissionsNumber (): int|false {
+		return (fileperms($this) & 0777);
+	}
+
+	public function getPermissions (): Permissions {
+		return new Permissions($this->getPermissionsNumber());
+	}
+
+	/**
+	 * Строка прав: типа "rwxrw-r--".
+	 */
+	public function getPermissionsString (): string {
+		$string   = '';
+		$number   = $this->getPermissionsNumber();
+		$bitsList = [0400,0200,0100, 0040,0020,0010, 0004,0002,0001];
+		$rwxList  = ['r', 'w', 'x'];
+		$rwxIndex = 0;
+		foreach ($bitsList as $bit) {
+			$string .= ($number & $bit ? $rwxList[$rwxIndex] : '-');
+			if (++$rwxIndex == 3) {
+				$rwxIndex = 0;
+			}
+		}
+		return $string;
+	}
+
+
+
+	public function symlink (string $path) {
+		if (!$this->isExists()) {
+			throw new \Exception("Текущий файл не существует: $this");
+		}
+
+		(new File($path))->getDirectory()->tryCreate();
+
+		try {
+			symlink($this, $path);
+		} catch (\Throwable $th) {
+			throw new \Exception(
+				"Не удалось создать символическую ссылку:\n" .
+				"$this\n"      .
+				"->\n"         .
+				"$path\n"      .
+				"----------\n" .
+				$th->getMessage()
+			);
+		}
+	}
 
 
 

@@ -1,6 +1,10 @@
 <?
 namespace S5\IO;
 
+use S5\System;
+
+
+
 /**
  * @phpstan-consistent-constructor
  */
@@ -52,7 +56,7 @@ class Directory extends Item {
 		if (is_file($path)) {
 			throw new \Exception("Уже существует файл с таким путём: $path");
 		}
-		if (!mkdir($path, $this->params['dirs_mod'], true)) {
+		if (@!mkdir($path, $this->params['dirs_mod'], true)) {
 			throw new \Exception("Не удалось создать папку $path");
 		}
 		return true;
@@ -88,8 +92,11 @@ class Directory extends Item {
 			$newPath = "$parentDir/$name";
 		}
 
-		if (file_exists($newPath) and !$isOverwrite) {
-			throw new \Exception("Уже существует файл с таким путём: ".$currentPath);
+		if (file_exists($newPath)) {
+			if (!$isOverwrite) {
+				throw new \Exception("Уже существует файл с таким путём: ".$currentPath);
+			}
+			unlink($newPath);
 		}
 
 		$r = rename($currentPath, $newPath);
@@ -175,6 +182,16 @@ class Directory extends Item {
 				unlink($fullItemPath);
 			}
 		}
+	}
+
+
+
+	public function chown (string|int $user = '', string|int $group = '', bool $isRecursive = false) {
+		parent::baseChown($user, $group, $isRecursive);
+	}
+
+	public function chmod (string|int $mode, bool $isRecursive = false) {
+		parent::baseChmod($mode, $isRecursive);
 	}
 
 
@@ -279,6 +296,21 @@ class Directory extends Item {
 		}
 
 		closedir($dh);
+	}
+
+
+
+	public function walk (\Closure $callback) {
+		$walk = function (Item $item) use (&$walk, $callback) {
+			$callback($item);
+			if ($item->isDirectory()) {
+				/** @var Directory $item */
+				foreach ($item->getItemsList() as $subitem) {
+					$walk($subitem);
+				}
+			}
+		};
+		$walk($this);
 	}
 
 

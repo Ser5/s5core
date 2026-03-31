@@ -1,6 +1,8 @@
 <?
 namespace S5\IO;
 
+
+
 class Path {
 	protected string $pathString;
 

@@ -1,6 +1,10 @@
 <?
 namespace S5\IO;
 
+use S5\IO\Permissions\Permissions;
+
+
+
 class DirectoryTest extends TestCase {
 	public function __construct (...$p) {
 		parent::__construct(...$p);
@@ -12,10 +16,12 @@ class DirectoryTest extends TestCase {
 	public function setUp (): void {
 		parent::setUp();
 
-		if (!mkdir($this->testDirPath.'/1',   0777, true))          $this->fail('failed');
-		if (!mkdir($this->testDirPath.'/1/a', 0777, true))          $this->fail('failed');
-		if (!mkdir($this->testDirPath.'/1/b', 0777, true))          $this->fail('failed');
-		if (!mkdir($this->testDirPath.'/1/c', 0777, true))          $this->fail('failed');
+		umask(0);
+
+		if (!mkdir($this->testDirPath.'/1/',   0777, true))         $this->fail('failed');
+		if (!mkdir($this->testDirPath.'/1/a/', 0777, true))         $this->fail('failed');
+		if (!mkdir($this->testDirPath.'/1/b/', 0777, true))         $this->fail('failed');
+		if (!mkdir($this->testDirPath.'/1/c/', 0777, true))         $this->fail('failed');
 		if (!file_put_contents($this->testDirPath.'/1/1.txt', '1')) $this->fail('failed');
 		if (!file_put_contents($this->testDirPath.'/1/2.txt', '1')) $this->fail('failed');
 		if (!file_put_contents($this->testDirPath.'/1/3.txt', '1')) $this->fail('failed');
@@ -270,6 +276,50 @@ class DirectoryTest extends TestCase {
 		$this->assertException(fn() => $dir->deleteOldFilesList('a'));
 		$this->assertException(fn() => $dir->deleteOldFilesList('a1'));
 		$this->assertException(fn() => $dir->deleteOldFilesList('1a'));
+	}
+
+
+
+	public function testPermissions () {
+		$d = new Directory($this->testDirPath.'/1/');
+
+		$testPerms = function (Item $item, string $expected) {
+			$this->assertEquals($expected, $item->getPermissionsString());
+		};
+
+		$this->assertEquals(0777, $d->getPermissionsNumber());
+		$testPerms($d, 'rwxrwxrwx');
+
+		$d->chmod(0700);
+		$testPerms($d, 'rwx------');
+
+		$d->chmod(0755);
+		$testPerms($d, 'rwxr-xr-x');
+
+		$d->chmod('755', true);
+		$testPerms($d,                     'rwxr-xr-x');
+		$testPerms(new Directory("$d/a/"), 'rwxr-xr-x');
+		$testPerms(new File("$d/1.txt"),   'rwxr-xr-x');
+
+		$d->chmod('a-x,u=rwX,g=rX,o=rX', true);
+		$testPerms($d,                     'rwxr-xr-x');
+		$testPerms(new Directory("$d/a/"), 'rwxr-xr-x');
+		$testPerms(new File("$d/1.txt"),   'rw-r--r--');
+	}
+
+
+
+	public function testWalk () {
+		$d = new Directory($this->testDirPath);
+
+		$expectedItemNamesList = ['Directory', '1', '1.txt', '2.txt', '3.txt', 'a', 'b', 'c'];
+
+		$walkedItemNamesList = [];
+		$d->walk(function (Item $i) use (&$walkedItemNamesList) {
+			$walkedItemNamesList[] = $i->getName();
+		});
+
+		$this->assertEquals($expectedItemNamesList, $walkedItemNamesList);
 	}
 
 
