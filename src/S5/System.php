@@ -4,7 +4,7 @@ namespace S5;
 
 
 class System {
-	public static function exec (string $command, bool $isThrowException = false): array {
+	public static function exec (string $command, bool $isThrowException = true): array {
 		$output = '';
 		$code   = 0;
 
@@ -25,7 +25,7 @@ class System {
 
 
 
-	public static function passthru (string $command, bool $isThrowException = false): int {
+	public static function passthru (string $command, bool $isThrowException = true): int {
 		passthru($command.' 2>&1', $code);
 
 		if ($code and $isThrowException) {
