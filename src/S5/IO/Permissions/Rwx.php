@@ -9,7 +9,6 @@ class Rwx {
 	public bool $x;
 
 	public function __construct (int $flags) {
-		dump($flags);
 		$this->r = (bool)($flags & 04);
 		$this->w = (bool)($flags & 02);
 		$this->x = (bool)($flags & 01);

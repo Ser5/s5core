@@ -1,6 +1,8 @@
 <?
 namespace S5;
 
+
+
 trait ConstructTrait {
 	public function __construct (array $params = []) {
 		$this->_copyConstructParams($params);
